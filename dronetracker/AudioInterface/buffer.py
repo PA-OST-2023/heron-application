@@ -6,7 +6,7 @@ import threading
 
 class RingBuffer:
     def __init__(self, capacity, num_channels):
-        self.capacity = np.uint16(2**capacity)
+        self.capacity = np.uint32(2**capacity)
         self.ringMask = np.uint16(self.capacity-1)
         self._data = np.empty((self.capacity, num_channels), dtype=np.int16)
         self.size = 0
@@ -67,21 +67,22 @@ class RingBuffer:
     def get_size(self):
         return self.size
 
-def writer(buffer):
-    for i in range(44100):
-        data = np.array([i,i,i])
-        buffer.append(data, 1)
-#         print('Data Writa')
-        sleep(1/44100)
-
-def reader(buffer):
-    while True:
-        data = buffer.get_n(2048)
-        if data is None:
-            return
-        print(f'{np.min(data)} --- { np.max(data)}')
-print('start')
 if __name__ == "__main__":
+    def writer(buffer):
+        for i in range(44100):
+            data = np.array([i,i,i])
+            buffer.append(data, 1)
+    #         print('Data Writa')
+            sleep(1/44100)
+
+    def reader(buffer):
+        while True:
+            data = buffer.get_n(2048)
+            if data is None:
+                return
+            print(f'{np.min(data)} --- { np.max(data)}')
+    print('start')
+
     print("start")
     buffer = RingBuffer(15, 3)
     schribi = threading.Thread(target=writer, args=(buffer,))

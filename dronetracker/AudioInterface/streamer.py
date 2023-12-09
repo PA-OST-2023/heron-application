@@ -2,5 +2,9 @@
 
 class Streamer:
 
-    def bla():
+    def __init__(self):
         pass
+
+    def get_next_block(self):
+        pass
+

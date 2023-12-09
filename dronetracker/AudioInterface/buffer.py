@@ -37,7 +37,7 @@ class RingBuffer:
             if self.is_full():
                 self.tail = (self.tail + 1) & self.ringMask
             else:
-                self.size += 1
+                self.size += size
             self._data[self.head:self.head + size] = item
             self.head = (self.head + size) & self.ringMask
             self._readCondition.notify_all()

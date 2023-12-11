@@ -5,9 +5,9 @@ from time import sleep
 import sys
 
 sys.path.append("..")
-from buffer import RingBuffer
+from AudioInterface.buffer import RingBuffer
 
-from streamer import Streamer
+from AudioInterface.streamer import Streamer
 
 
 class WavStreamer(Streamer):
@@ -51,9 +51,9 @@ class WavStreamer(Streamer):
         self.__buffer.append(data, data.shape[0])
 
 
-    def get_block(self):
+    def get_block(self, block_size):
         print('---------READ--------')
-        return self.__buffer.get_n(self.__block_size)
+        return self.__buffer.get_n(block_size)
 
     def __callback(self):
         def callback(in_data, frame_count, time_info, status):

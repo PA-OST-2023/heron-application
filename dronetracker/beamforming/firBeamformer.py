@@ -1,4 +1,4 @@
-class BeamFormer():
+class FirBeamFormer(BeamFormer):
 
     def __init__(self):
         pass
@@ -12,4 +12,5 @@ class BeamFormer():
     def local_beam_sweep(self, signals, center_direction):
         pass
 
-    def listen_at(self, signals, direction)
+    def listen_at(self, signals, direction):
+        pass

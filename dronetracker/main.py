@@ -15,7 +15,7 @@ class Application ():
     ani = None
 
     def __init__(self):
-        audio_file = '../data/dyn2.wav'
+        audio_file = '../data/dyn.wav'
         self.streamer = WavStreamer(audio_file, 1024*4)
         self.block_len=1024*8
         self.xf = fftfreq(self.block_len, 1/44100)[:self.block_len//2] # TODO SAMPLINGRATE
@@ -44,11 +44,24 @@ class Application ():
 
     def lego(self):
         self.streamer.start_stream()
-        self.fig, self.ax = plt.subplots() 
-        self.ani = FuncAnimation(plt.gcf(), self.plotCall(), 100)
-        self.ax.set_ylim(0,200)
+        i = 0
+        while(True):
+            block = self.streamer.get_block(self.block_len)
+            if block is None:
+                print('----Done---')
+                self.streamer.end_stream()
+                return
+            i += self.block_len
+            chanel = block[:,0]
+            chanel2 = block[:,1]
+            sfs = fft(block.T, self.block_len * 2)
+            print(sfs.shape)
+            print(i / 44100)
+#        self.fig, self.ax = plt.subplots() 
+#        self.ani = FuncAnimation(plt.gcf(), self.plotCall(), 100)
+#        self.ax.set_ylim(0,200)
 #         self.ax.grid(True)
-        plt.show()
+#        plt.show()
 
 
 if __name__ == "__main__":

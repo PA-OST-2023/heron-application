@@ -5,7 +5,7 @@ from matplotlib.animation import FuncAnimation
 
 from scipy.fft import fft, fftfreq, ifft
 
-
+from beamforming.prototypeTracker import ProtTracker
 from AudioInterface.waveStreamer import WavStreamer
 
 class Application ():
@@ -17,8 +17,10 @@ class Application ():
     def __init__(self):
         audio_file = '../data/dyn.wav'
         self.streamer = WavStreamer(audio_file, 1024*4)
-        self.block_len=1024*8
+        self.block_len=1024*2
         self.xf = fftfreq(self.block_len, 1/44100)[:self.block_len//2] # TODO SAMPLINGRATE
+        self.tracker = ProtTracker('./configs/testfancy1.toml')
+
 
     def plotCall(self):
         def animate(i):
@@ -52,11 +54,12 @@ class Application ():
                 self.streamer.end_stream()
                 return
             i += self.block_len
-            chanel = block[:,0]
-            chanel2 = block[:,1]
-            sfs = fft(block.T, self.block_len * 2)
-            print(sfs.shape)
-            print(i / 44100)
+            self.tracker.track(block)
+#             chanel = block[:,0]
+# #             chanel2 = block[:,1]
+#             sfs = fft(block.T, self.block_len * 2)
+#             print(sfs.shape)
+#             print(i / 44100)
 #        self.fig, self.ax = plt.subplots() 
 #        self.ani = FuncAnimation(plt.gcf(), self.plotCall(), 100)
 #        self.ax.set_ylim(0,200)

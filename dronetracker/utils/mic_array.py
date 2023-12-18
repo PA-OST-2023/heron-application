@@ -41,6 +41,34 @@ def populate_array(M_tilde):
     ax.grid()
     return Mall
 
+def make_circ_array(n_mic, r, plot=False, offset=0):
+    phi = (np.arange(n_mic)) * 2 * pi / n_mic + offset
+    R = np.ones_like(phi) * r
+    if plot:
+        fig, ax = plt.subplots(subplot_kw={"projection": "polar"}, layout="constrained")
+        ax.scatter(phi, R)
+        ax.set_title("Circular Array")
+        ax.grid(True)
+    return phi, R
+
+
+def make_fancy_circ_array(n_mic, n_circ, shift, r_0, r_1, plot=False):
+    circ_m = n_mic // n_circ
+    dr = (r_1 - r_0) / (n_circ - 1)
+    phi = np.ones(n_mic)
+    r = np.zeros(n_mic)
+    for i in range(n_circ):
+        lb = i * circ_m
+        ub = (i + 1) * circ_m
+        phi[lb:ub], r[lb:ub] = make_circ_array(circ_m, r_0 + i * dr, offset=i * shift)
+    if plot:
+        fig, ax = plt.subplots(subplot_kw={"projection": "polar"}, layout="constrained")
+        ax.scatter(phi, r)
+        ax.set_title("Circular Array")
+        ax.grid(True)
+        plt.show()
+    return phi, r
+
 if __name__ == "__main__":
     import csv
     with open('./gt/FancyArray_TestGeometry.csv', newline='') as csvfile:

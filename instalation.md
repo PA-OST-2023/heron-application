@@ -6,6 +6,11 @@ setup ssh key for git
 ssh-keygen -o
 cat /<keyname>.pub
 
+fro vim
+sudo apt-get install cmake cmake-qt-gui
+install youcompleteme
+
+
 git clone git@github.com:PA-OST-2023/heron-application.git
 cd heron-application
 python3.8 -m venv venv

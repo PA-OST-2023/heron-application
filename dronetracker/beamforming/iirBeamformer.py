@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import sin, cos, pi, exp
+import matplotlib.pyplot as plt
 
 from scipy.fft import fft, fftfreq, ifft
 from scipy.spatial.transform import Rotation as R
@@ -9,6 +10,8 @@ class IirBeamFormer():
 
     filterbank = None
 
+    i = 0
+
 
     def __init__(self, block_len, f_low, f_high, f_s, v_m):
         self._block_len = block_len
@@ -16,7 +19,7 @@ class IirBeamFormer():
         self._f_high = int(2 * block_len/f_s * f_high)
         self._fs = f_s
         self._vm = v_m
-
+        self.audio=[]
         pass
 
     def compute_filterbank(self, coord):
@@ -32,7 +35,7 @@ class IirBeamFormer():
         coord_t = coord_t.swapaxes(1,0)
         x = coord_t[:,:,:,0]
         y = coord_t[:,:,:,1]
-
+#         import ipdb; ipdb.set_trace()
         r_m = np.sqrt(x**2 + y**2)[... ,np.newaxis]
         phi_m = np.arctan2(y, x)[... ,np.newaxis]
         f = np.arange(self._block_len).reshape(1, 1, 1, -1) * self._fs / (2*self._block_len)
@@ -45,17 +48,49 @@ class IirBeamFormer():
         self.minFb = self.filterbank[:,:,:,self._f_low:self._f_high]
         return fb
 
+    def beamsearch(self, r_m, phi_m):
+        f_low = self._f_low
+        f_high = self._f_high
+        n_phi = 360//2
+        n_theta = 90//2
+        #     phi = np.linspace(0, 2*pi, n_phi).reshape(1,-1,1)
+        #     theta = np.linspace(0, pi/2, n_theta).reshape(-1,1,1)
+        theta_s = np.linspace(0, pi / 2, n_theta).reshape(-1, 1, 1, 1)
+        phi_s = np.linspace(-pi, pi, n_phi).reshape(1, -1, 1, 1)
+        phi_m = phi_m.reshape(1, 1, -1, 1)
+        r_m = r_m.reshape(1, 1, -1, 1)
+        f = np.arange(self._block_len).reshape(1, 1, 1, -1) * self._fs / (2*self._block_len)
+        t_s = sin(phi_s + pi / 2 - phi_m) * r_m * (sin(theta_s) / self._vm)
+        print(t_s.shape)
+        #     t_m = sin(phi + pi/2 - phi_m) * r_m * (sin(theta) / v_r)
+        t_m = 0
+        fb = np.zeros((*np.squeeze(t_s).shape, self._block_len), dtype=np.complex64)
+        fb[:,:,:,f_low:f_high] = exp(-1j * 2 * pi * f[:,:,:,f_low:f_high] * (t_s))
+#         fb = exp(-1j * 2 * pi * f * (t_s))
+        self.filterbank = fb
+        self.minFb = self.filterbank[:,:,:,self._f_low:self._f_high]
+        return None
+
+
+
 
     def global_beam_sweep(self, block):
-        tracks = fft(block.T, axis=-1, n=2*self._block_len)
+#         self.audio.append(block)
+        tracks = fft(block.T, axis=-1)
         tracks = tracks[:self._block_len]
         print('calc...')
         fb_a = self.minFb * tracks[:,self._f_low:self._f_high]
-
+#         print(fb_a.shape)
 #     fb = fb_a * tracks
 #     response = np.sum(np.abs(np.sum(fb, axis=-2)[:, :, 50:200]) ** 2, axis=-1)
         signals =np.abs(np.sum(fb_a, axis=-2)) # [:, :, 25:100])
         response = np.sum(signals ** 2, axis=-1)
+        return response
+        fig, ax = plt.subplots()
+        ax.imshow(response)
+        fig.savefig(f'res{self.i}.jpg')
+        plt.close()
+        self.i+=1
 
         return response
 

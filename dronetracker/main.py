@@ -16,7 +16,7 @@ class Application ():
 
     def __init__(self):
         audio_file = '../data/dyn.wav'
-        self.streamer = WavStreamer(audio_file, 1024*4)
+        self.streamer = WavStreamer(audio_file, 1024*1)
         self.block_len=1024*2
         self.xf = fftfreq(self.block_len, 1/44100)[:self.block_len//2] # TODO SAMPLINGRATE
         self.tracker = ProtTracker('./configs/testfancy1.toml')
@@ -52,7 +52,7 @@ class Application ():
             if block is None:
                 print('----Done---')
                 self.streamer.end_stream()
-                return
+                break
             i += self.block_len
             self.tracker.track(block)
 #             chanel = block[:,0]

@@ -47,7 +47,7 @@ class WavStreamer(Streamer):
         self.__p.terminate()
 
     def __load_buffer(self, data):
-        print('load')
+#         print('load')
         self.__buffer.append(data, data.shape[0])
 
 

@@ -21,10 +21,9 @@ class ProtTracker(Tracker):
         self.mic_order = config['mic_order']
         arr_param = config.get('arr_param', None)
         self.phi, self.r = make_fancy_circ_array(self.n_mics, **arr_param)
-        print(self.mic_order)
-#         self.phi = phi[self.mic_order]
-#         self.r = r[self.mic_order]
         self.coords = np.vstack((cos(self.phi), sin(self.phi), np.zeros_like(self.phi))) * self.r
+
+        # Precompute Filterbanks
         self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
         self.beamformer.compute_filterbank(self.coords.T)
 #         self.beamformer.beamsearch(self.r, self.phi)

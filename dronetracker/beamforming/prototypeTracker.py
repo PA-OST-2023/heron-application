@@ -26,8 +26,8 @@ class ProtTracker(Tracker):
 #         self.r = r[self.mic_order]
         self.coords = np.vstack((cos(self.phi), sin(self.phi), np.zeros_like(self.phi))) * self.r
         self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
-#         self.beamformer.compute_filterbank(self.coords.T)
-        self.beamformer.beamsearch(self.r, self.phi)
+        self.beamformer.compute_filterbank(self.coords.T)
+#         self.beamformer.beamsearch(self.r, self.phi)
 
         print('Tracker Initialized')
 

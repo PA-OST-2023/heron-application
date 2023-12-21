@@ -22,7 +22,6 @@ class WavStreamer(Streamer):
         self.__channels = self.__wf.getnchannels()
         self.__sr = self.__wf.getframerate()
         self.__buffer = RingBuffer(15, self.__channels)
-
         self.__stream = None
         self.__p = None
 

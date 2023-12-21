@@ -7,6 +7,7 @@ from scipy.fft import fft, fftfreq, ifft
 
 from beamforming.prototypeTracker import ProtTracker
 from AudioInterface.waveStreamer import WavStreamer
+from ui.liveBeamPlot import UI
 
 class Application ():
 
@@ -19,9 +20,13 @@ class Application ():
         self.streamer = WavStreamer(audio_file, 1024*1)
         self.block_len=1024*2
         self.tracker = ProtTracker('./configs/testfancy1.toml')
+        self.ui = UI(self.tracker, self.streamer)
+
 
 
     def start(self):
+        self.ui.run()
+        return
         self.streamer.start_stream()
         i = 0
         while(True):
@@ -36,5 +41,6 @@ class Application ():
 
 if __name__ == "__main__":
     print("Hello")
+    print("Trello")
     app = Application()
     app.start()

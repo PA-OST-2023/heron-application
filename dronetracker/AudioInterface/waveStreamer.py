@@ -6,15 +6,13 @@ import sys
 
 sys.path.append("..")
 from AudioInterface.buffer import RingBuffer
-
 from AudioInterface.streamer import Streamer
-
 
 class WavStreamer(Streamer):
 
 
     def __init__(self, audio_file, block_size):
-        self.__audio_file = audio_file
+        self.__audio_file = str(audio_file)
 
         self.__block_size = block_size
 

@@ -20,11 +20,11 @@ class KalmanFilter2D:
                            [0.0, 1.0, 0.0, 0.0]])
         self.R = np.array([[R, 0.0],
                            [0.0, R]])
-        
+
         self.lifetime = 5
         self.rawBox = []
         self.floatBox = []
-        
+
 
     def _predict(self):
         """

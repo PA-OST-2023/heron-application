@@ -18,6 +18,7 @@ class Application ():
 
     def __init__(self):
         audio_file = Path(__file__).parent.parent / "data" / "random.wav"
+#         audio_file = Path(__file__).parent.parent / "data" / "dyn.wav"
         self.streamer = WavStreamer(audio_file, 1024*1)
         self.block_len=1024*2
         self.tracker = ProtTracker(Path(__file__).parent / "configs" / "testfancy1.toml")

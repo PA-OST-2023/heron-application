@@ -9,6 +9,7 @@ import sys
 sys.path.append("..")
 from beamforming.iirBeamformer import IirBeamFormer
 from beamforming.tracker import Tracker
+from beamforming.kalman import KalmanFilter2D
 from utils.mic_array import make_fancy_circ_array
 from utils.sphere import create_sphere
 
@@ -33,11 +34,27 @@ class ProtTracker(Tracker):
         self.phi = sphere['theta']
         self.theta = sphere['phi']
         self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
+
+        Ts = 0.01
+        Qv = 500
+        Q_pos = 200
+        Q_vel = 100
+        self.kalman = KalmanFilter2D(Ts, Qv, Q_pos, Q_vel)
+
+
 #         self.beamformer.compute_filterbank(self.coords.T)
 #         self.beamformer.beamsearch(self.r, self.phi)
 
         print('Tracker Initialized')
 
+
+    def _convert_into_cartesian(self, index):
+        phi = self.phi[index]
+        theta = self.theta[index]
+        r = theta
+        x = cos(phi)*r
+        y = sin(phi)*r
+        return np.array([x,y])
 
     def track(self, block):
         print('Do beamforming')
@@ -48,8 +65,11 @@ class ProtTracker(Tracker):
 #         self.fig.data[0].z = response
         time.sleep(0.01)
         maxi = np.unravel_index(np.argmax(response, axis=None), response.shape)
+        pos = self._convert_into_cartesian(maxi)
+        self.kalman.run_filter(pos, 0)
+        pos_es = self.kalman.get_position()
         response = response /response[maxi]
         print('beamformed')
         print(f'========================================{maxi}')
         print(f'=============={self.i}=============')
-        return response, self.phi, self.theta
+        return response,pos, pos_es, self.phi, self.theta

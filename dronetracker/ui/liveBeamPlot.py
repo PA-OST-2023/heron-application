@@ -54,7 +54,7 @@ class UI():
 
     def run(self):
         self.streamer.start_stream()
-        self.app.run(debug=True)
+        self.app.run(debug=False)
 
     def setup_callbacks(self):
     # Multiple components can update everytime interval gets fired.
@@ -79,19 +79,18 @@ class UI():
             fig = make_subplots(
             rows=2, cols=2,
             specs=[[{'type': 'mesh3d'}, {'type': 'mesh3d'}],
+#                     [{'type':'scatter'}, {'type': 'heatmap'}]]
                     [{'type':'scatter'}, {'type': 'image'}]]
             )
 #             fig = 
 #             fig = go.Figure(data=[go.Mesh3d(z=(response), x=(self.x), y=(self.y),
-            '''
             fig.add_trace(go.Mesh3d(z=(response), x=(self.x), y=(self.y),
                                 intensity=response, colorscale='Viridis'),
                             row=1,col=1)
             fig.add_trace(go.Mesh3d(z=z, x=x, y=y,
                                     intensity=r, colorscale='Viridis'),
                             row=1,col=2)
-            '''
-            '''fig.add_trace(go.Scatter(
+            fig.add_trace(go.Scatter(
                             x=self.x_hat,
                             y=self.y_hat,
                             mode="lines+markers",
@@ -99,18 +98,19 @@ class UI():
                             line={"color": "rgb(0, 255, 0)"},
                             marker={"color": "rgb(0, 255, 0)", "size": 8},
                             ), row=2, col=1)
-            '''
-            grid_x, grid_y = np.mgrid[-1.6:1.6:100j, -1.6:1.6:100j]
+            grid_x, grid_y = np.mgrid[-1.6:1.6:150j, -1.6:1.6:150j]
             grid = griddata((self.x,self.y), response, (grid_x, grid_y), method='nearest').T
-            grid = np.repeat(grid[:, :, np.newaxis], 1, axis=2)
-            grid = grid - np.min(grid)
-            grid = grid/np.max(grid) * 255
-            gird = grid.astype(np.uint8).copy()
+#             grid = np.repeat(grid[:, :, np.newaxis], 1, axis=2)
+#             grid = grid - np.min(grid)
+#             grid = grid/np.max(grid) * 255
+#             gird = grid.astype(np.uint8).copy()
             print(grid.shape)
             print(self.im.shape)
+#             fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
+#             fig.add_trace(px.imshow(grid).data[0], row=2, col=2)
 #             fig.add_trace(px.imshow(grid).data[0], row=2, col=2)
 #             fig.add_trace(go.Image(z=grid), row=2, col=2)
-            fig.add_trace(go.Image(z=self.im), row=2, col=2)
+#             fig.add_trace(go.Image(z=self.im), row=2, col=2)
 #             fig = go.Figure(data=[go.Mesh3d(z=(z), x=(x), y=(y),
 #                             intensity=r, colorscale='Viridis')],
 #                             layout=self.layout).set_subplots(1,1)

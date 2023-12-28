@@ -5,7 +5,7 @@ import sys
 sys.path.append("..")
 from beamforming.iirBeamformer import IirBeamFormer
 
-class Tracker():
 
+class Tracker:
     def __init__(self):
-        print('Init Tracker')
+        print("Init Tracker")

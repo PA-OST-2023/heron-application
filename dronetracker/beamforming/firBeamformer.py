@@ -1,5 +1,4 @@
 class FirBeamFormer(BeamFormer):
-
     def __init__(self):
         pass
 

@@ -2,7 +2,7 @@ import numpy as np
 
 
 class KalmanFilter2D:
-    def __init__(self, Ts, Qv, Qw_pos, Qw_vel):
+    def __init__(self, Ts, Qv, Qw_pos, Qw_vel, x_0=0, y_0=0):
         self.A = np.array(
             [[1, 0, Ts, 0], [0, 1, 0, Ts], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32
         )
@@ -16,7 +16,8 @@ class KalmanFilter2D:
         )
         self.Qv = np.array([[Qv, 0], [0, Qv]])
         self.K = None
-        self.x = np.zeros((4), dtype=np.float32)
+#         self.x = np.zeros((4), dtype=np.float32)
+        self.x = np.array([x_0, y_0, 0, 0], dtype=np.float32)
         pass
 
     def run_filter(self, y, Qv):
@@ -27,6 +28,10 @@ class KalmanFilter2D:
         )
         self.x = x_n_n1 + self.K @ (y - self.C @ x_n_n1)
         self.P = (np.eye(4) - self.K @ self.C) @ P_n_n1
+        return self.C @ self.x
+
+    def make_prediction(self):
+        return self.A @ self.x
 
     def get_position(self):
         return self.C @ self.x

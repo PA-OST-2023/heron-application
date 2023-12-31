@@ -12,6 +12,7 @@ from beamforming.tracker import Tracker
 from beamforming.kalman import KalmanFilter2D
 from utils.mic_array import make_fancy_circ_array
 from utils.sphere import create_sphere
+from utils.peakDetection import arg_max_detector
 
 
 class ProtTracker(Tracker):
@@ -26,10 +27,7 @@ class ProtTracker(Tracker):
         self.n_mics = config["n_mic"]
         self.mic_order = config["mic_order"]
         arr_param = config.get("arr_param", None)
-        self.phi, self.r = make_fancy_circ_array(self.n_mics, **arr_param)
-        self.coords = (
-            np.vstack((cos(self.phi), sin(self.phi), np.zeros_like(self.phi))) * self.r
-        )
+        self.phi, self.r, self.coords = make_fancy_circ_array(self.n_mics, **arr_param)
 
         # Precompute Filterbanks
         self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
@@ -57,6 +55,9 @@ class ProtTracker(Tracker):
         y = sin(phi) * r
         return np.array([x, y])
 
+    def _convert_response_to_image(self, response):
+        pass
+
     def track(self, block):
         print("Do beamforming")
         print(block.shape)
@@ -64,8 +65,11 @@ class ProtTracker(Tracker):
         block = block[:, self.mic_order]
         response = self.beamformer.global_beam_sweep(block)
         #         self.fig.data[0].z = response
-        time.sleep(0.01)
-        maxi = np.unravel_index(np.argmax(response, axis=None), response.shape)
+#         time.sleep(0.01)
+        peaks = arg_max_detector(response)
+#         maxi = np.unravel_index(np.argmax(response, axis=None), response.shape)
+        peaks_cartesian = [self._convert_into_cartesian(peak) for peak in peaks]
+        maxi = peaks[0]
         pos = self._convert_into_cartesian(maxi)
         self.kalman.run_filter(pos, 0)
         pos_es = self.kalman.get_position()

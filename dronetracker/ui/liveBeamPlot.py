@@ -74,8 +74,10 @@ class UI:
                 self.streamer.start_stream()
                 return None
             response, meas, predicted, *_ = self.tracker.track(block)
-            self.x_hat.append(predicted[0])
-            self.y_hat.append(predicted[1])
+#             self.x_hat.append(predicted[0])
+#             self.y_hat.append(predicted[1])
+            self.x_hat=predicted[:,0]
+            self.y_hat=predicted[:,1]
             #             r = np.log(response+1) + 10
             r = response
             x = self.xx
@@ -114,6 +116,18 @@ class UI:
                     y=self.y_hat,
                     mode="lines+markers",
                     name="Data",
+                    line={"color": "rgb(255, 0, 0)"},
+                    marker={"color": "rgb(0, 255, 0)", "size": 8},
+                ),
+                row=2,
+                col=1,
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x= [1,0,-1,0],
+                    y= [0, 1, 0, -1],
+                    mode="lines+markers",
+                    name="Data",
                     line={"color": "rgb(0, 255, 0)"},
                     marker={"color": "rgb(0, 255, 0)", "size": 8},
                 ),
@@ -124,30 +138,30 @@ class UI:
             grid = griddata(
                 (self.x, self.y), response, (grid_x, grid_y), method="nearest"
             ).T
-            #             grid = np.repeat(grid[:, :, np.newaxis], 1, axis=2)
-            #             grid = grid - np.min(grid)
-            #             grid = grid/np.max(grid) * 255
-            #             gird = grid.astype(np.uint8).copy()
+            # grid = np.repeat(grid[:, :, np.newaxis], 1, axis=2)
+            # grid = grid - np.min(grid)
+            # grid = grid/np.max(grid) * 255
+            # gird = grid.astype(np.uint8).copy()
             print(grid.shape)
             print(self.im.shape)
-            #             fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
-            #             fig.add_trace(px.imshow(grid).data[0], row=2, col=2)
-            #             fig.add_trace(px.imshow(grid).data[0], row=2, col=2)
-            #             fig.add_trace(go.Image(z=grid), row=2, col=2)
-            #             fig.add_trace(go.Image(z=self.im), row=2, col=2)
-            #             fig = go.Figure(data=[go.Mesh3d(z=(z), x=(x), y=(y),
-            #                             intensity=r, colorscale='Viridis')],
-            #                             layout=self.layout).set_subplots(1,1)
+            # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
+            # fig.add_trace(px.imshow(grid).data[0], row=2, col=2)
+            # fig.add_trace(px.imshow(grid).data[0], row=2, col=2)
+            # fig.add_trace(go.Image(z=grid), row=2, col=2)
+            # fig.add_trace(go.Image(z=self.im), row=2, col=2)
+            # fig = go.Figure(data=[go.Mesh3d(z=(z), x=(x), y=(y),
+            #                 intensity=r, colorscale='Viridis')],
+            #                 layout=self.layout).set_subplots(1,1)
             fig.update_layout(width=1600, height=1400, uirevision=1)
             fig.update_yaxes(
                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
             )
             fig.update_xaxes(range=[-1.7, 1.7], row=2, col=1)
 
-            #             fig.update_layout(width=1500, height=900)
-            #             fig2 = go.Figure(data=[go.Mesh3d(z=(response), x=(self.x), y=(self.y),
-            #                             intensity=r, colorscale='Viridis')],
-            #                             layout=self.layout).set_subplots(1,1)
+            # fig.update_layout(width=1500, height=900)
+            # fig2 = go.Figure(data=[go.Mesh3d(z=(response), x=(self.x), y=(self.y),
+            #                 intensity=r, colorscale='Viridis')],
+            #                 layout=self.layout).set_subplots(1,1)
             return fig
 
 

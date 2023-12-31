@@ -6,6 +6,7 @@ from matplotlib.animation import FuncAnimation
 from scipy.fft import fft, fftfreq, ifft
 
 from beamforming.prototypeTracker import ProtTracker
+from beamforming.kalmanTracker import KalmanTracker
 from AudioInterface.waveStreamer import WavStreamer
 from ui.liveBeamPlot import UI
 from pathlib import Path
@@ -15,16 +16,23 @@ class Application:
     fig = None
     ax = None
     ani = None
+    tracker = None
 
     def __init__(self):
         audio_file = Path(__file__).parent.parent / "data" / "random.wav"
         #         audio_file = Path(__file__).parent.parent / "data" / "dyn.wav"
         self.streamer = WavStreamer(audio_file, 1024 * 4)
         self.block_len = 1024 * 2
-        self.tracker = ProtTracker(
+#         self.tracker = ProtTracker(
+#             Path(__file__).parent / "configs" / "testfancy1.toml"
+#         )
+        self.tracker = KalmanTracker(
             Path(__file__).parent / "configs" / "testfancy1.toml"
         )
         self.ui = UI(self.tracker, self.streamer)
+
+    def _init_tracker(self):
+        pass
 
     def start(self):
         self.ui.run()

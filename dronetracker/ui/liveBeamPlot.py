@@ -12,6 +12,7 @@ from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 
 from beamforming.prototypeTracker import Tracker
+from beamforming.kalmanTracker import KalmanTracker, Kalman_track_object
 
 
 class UI:
@@ -35,6 +36,7 @@ class UI:
         self.zz = cos(self.theta)
         self.x_hat = []
         self.y_hat = []
+        self.max_vals = []
         self.im = np.random.random_integers(low=0, high=255, size=(100, 100, 3))
 
         external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
@@ -73,11 +75,12 @@ class UI:
                 self.streamer.end_stream()
                 self.streamer.start_stream()
                 return None
-            response, meas, predicted, *_ = self.tracker.track(block)
+            response, meas, tracking_objects, max_val, *_ = self.tracker.track(block)
 #             self.x_hat.append(predicted[0])
 #             self.y_hat.append(predicted[1])
-            self.x_hat=predicted[:,0]
-            self.y_hat=predicted[:,1]
+            self.max_vals.append(max_val)
+#             self.x_hat=predicted[:,0]
+#             self.y_hat=predicted[:,1]
             #             r = np.log(response+1) + 10
             r = response
             x = self.xx
@@ -89,7 +92,8 @@ class UI:
                 specs=[
                     [{"type": "mesh3d"}, {"type": "mesh3d"}],
                     #                     [{'type':'scatter'}, {'type': 'heatmap'}]]
-                    [{"type": "scatter"}, {"type": "image"}],
+#                     [{"type": "scatter"}, {"type": "image"}],
+                    [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
             #             fig =
@@ -110,29 +114,33 @@ class UI:
                 row=1,
                 col=2,
             )
+            for tracking_object in tracking_objects:
+                x_data = tracking_object.track[:,0]
+                y_data = tracking_object.track[:,1]
+                color = tracking_object.color
+                fig.add_trace(
+                    go.Scatter(
+                        x=x_data,
+                        y=y_data,
+                        mode="lines+markers",
+                        name="Data",
+                        line={"color": color, "width": 2},
+                        marker={"color": "rgb(0, 0, 0)", "size": 2.5},
+                    ),
+                    row=2,
+                    col=1,
+                )
             fig.add_trace(
                 go.Scatter(
-                    x=self.x_hat,
-                    y=self.y_hat,
-                    mode="lines+markers",
-                    name="Data",
-                    line={"color": "rgb(255, 0, 0)"},
-                    marker={"color": "rgb(0, 255, 0)", "size": 8},
-                ),
-                row=2,
-                col=1,
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x= [1,0,-1,0],
-                    y= [0, 1, 0, -1],
+#                     x= [1,0,-1,0],
+                    y= self.max_vals,
                     mode="lines+markers",
                     name="Data",
                     line={"color": "rgb(0, 255, 0)"},
                     marker={"color": "rgb(0, 255, 0)", "size": 8},
                 ),
                 row=2,
-                col=1,
+                col=2,
             )
             grid_x, grid_y = np.mgrid[-1.6:1.6:150j, -1.6:1.6:150j]
             grid = griddata(

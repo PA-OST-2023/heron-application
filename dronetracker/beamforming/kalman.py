@@ -20,7 +20,7 @@ class KalmanFilter2D:
         self.x = np.array([x_0, y_0, 0, 0], dtype=np.float32)
         pass
 
-    def run_filter(self, y, Qv):
+    def run_filter(self, y, Qv=0):
         x_n_n1 = self.A @ self.x
         P_n_n1 = self.A @ self.P @ self.A.T + self.Qw
         self.K = (
@@ -29,6 +29,9 @@ class KalmanFilter2D:
         self.x = x_n_n1 + self.K @ (y - self.C @ x_n_n1)
         self.P = (np.eye(4) - self.K @ self.C) @ P_n_n1
         return self.C @ self.x
+
+    def run_blind_filter(self):
+        return self.run_filter(self.make_prediction()[:2])
 
     def make_prediction(self):
         return self.A @ self.x

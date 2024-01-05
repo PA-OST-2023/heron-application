@@ -5,6 +5,7 @@ import tomli
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 from scipy.interpolate import griddata
+import cv2 as cv
 
 import sys
 
@@ -29,7 +30,9 @@ class Kalman_track_object:
     n_predictions: int=0
 
 class KalmanTracker(Tracker):
+    i = 0
     def __init__(self, config_file=None):
+
         print("Init Tracker")
 
         with open(config_file, "rb") as f:
@@ -165,6 +168,10 @@ class KalmanTracker(Tracker):
         grid = griddata(
             (self.x, self.y), response, (grid_x, grid_y), method="linear"
         ).T
+        print(grid.dtype)
+        grid = (grid * 255).astype(np.uint8)
+        cv.imwrite(f'./tmp/im{self.i}.png', grid)
+        self.i += 1
 
         print('<><><><><><><><><>')
         print(self.objects[0].track[-1])

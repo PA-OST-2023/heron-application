@@ -38,7 +38,6 @@ class UI:
         self.x_hat = []
         self.y_hat = []
         self.max_vals = []
-        self.im = np.random.random_integers(low=0, high=255, size=(100, 100, 3))
 
         external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
         self.map_fig = self.setup_map()

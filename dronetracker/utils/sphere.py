@@ -23,7 +23,7 @@ def create_sphere(num_pts,factor = 1.1, plot=False):
         ax.scatter(x[:n], y[:n], z[:n])
         ax.axis("equal")
         plt.show()
-    return {"phi": phi, "theta": theta, "x": x, "y": y, "z": z}
+    return {"phi": theta, "theta": phi, "x": x, "y": y, "z": z}
 
 
 def transform_flat(theta, phi):

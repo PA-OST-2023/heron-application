@@ -20,11 +20,10 @@ class UI:
     def __init__(self, tracker, streamer):
         self.tracker = tracker
         self.streamer = streamer
-        self.phi = tracker.phi
-        self.theta = tracker.theta
-        self.r = self.theta
-        self.x = cos(self.phi) * self.r
-        self.y = sin(self.phi) * self.r
+        self.phi_beamsearch_sphere,self.theta_beamsearch_sphere  = tracker.get_sphere()
+        r_flat_proj = self.theta_beamsearch_sphere
+        self.x = cos(self.phi_beamsearch_sphere) * r_flat_proj
+        self.y = sin(self.phi_beamsearch_sphere) * r_flat_proj
         self.block_len = 1024 * 2
         self.layout = go.Layout(
             autosize=False,
@@ -32,15 +31,16 @@ class UI:
             height=900,
             margin=go.layout.Margin(l=50, r=50, b=100, t=100, pad=4),
         )
-        self.xx = sin(self.theta) * cos(self.phi)
-        self.yy = sin(self.theta) * sin(self.phi)
-        self.zz = cos(self.theta)
+        self.x_sphere = sin(self.theta_beamsearch_sphere) * cos(self.phi_beamsearch_sphere)
+        self.y_sphere = sin(self.theta_beamsearch_sphere) * sin(self.phi_beamsearch_sphere)
+        self.z_sphere = cos(self.theta_beamsearch_sphere)
         self.x_hat = []
         self.y_hat = []
         self.max_vals = []
 
         external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
-        self.map_fig = self.setup_map()
+        self.map_fig = None
+        self.setup_map()
 
         self.app = Dash(__name__, external_stylesheets=external_stylesheets)
         self.app.layout = html.Div(
@@ -73,16 +73,18 @@ class UI:
         a = 10
         d_lat = degrees(a/r_earth)
         d_lon = degrees(a/(np.sin(radians(c_lat))*r_earth))
-        fig = go.Figure(go.Scattermapbox(
+        self.map_fig = go.Figure(go.Scattermapbox(
                         mode = "markers+lines",
-                        lon = [c_lon - d_lon, c_lon, c_lon + d_lon, c_lon, c_lon - d_lon],
-                        lat = [c_lat, c_lat + d_lat, c_lat, c_lat-d_lat, c_lat],
+                        lon = [],
+                        lat = [],
                         marker = {'size': 10}))
 
-        fig.update_layout(mapbox_style="open-street-map", mapbox_zoom=18, mapbox_center_lat = 47.2233, mapbox_center_lon = 8.819,
+        self.map_fig.update_layout(mapbox_style="open-street-map", mapbox_zoom=18, mapbox_center_lat = 47.2233, mapbox_center_lon = 8.819,
             margin={"r":0,"t":0,"l":0,"b":0})
-        return fig
-        pass
+
+    def update_map_center(self, center_lon, center_lat):
+        self.map_fig.update_layout(mapbox_style="open-street-map", mapbox_zoom=18, mapbox_center_lat = center_lat, mapbox_center_lon = center_lon,
+            margin={"r":0,"t":0,"l":0,"b":0})
 
     def run(self):
         self.streamer.start_stream()
@@ -106,9 +108,9 @@ class UI:
             response, meas, tracking_objects, max_val, *_ = self.tracker.track(block)
             self.max_vals.append(max_val)
             r = response
-            x = self.xx
-            y = self.yy
-            z = self.zz
+            x = self.x_sphere
+            y = self.y_sphere
+            z = self.z_sphere
             fig = make_subplots(
                 rows=2,
                 cols=2,
@@ -146,15 +148,15 @@ class UI:
                         mode="lines+markers",
                         name="Data",
                         line={"color": color, "width": 2},
-                        marker={"color": "rgb(0, 0, 0)", "size": 2.5},
+                        marker={"color": color, "size": 2.5},
                     ),
                     row=2,
                     col=1,
                 )
 
             self.map_fig.data = []
-            c_lon = 8.819
-            c_lat = 47.2233
+            c_lon = 8.8191
+            c_lat = 47.22324
 
             for tracking_object in tracking_objects:
                 x_data = tracking_object.track[:,0]
@@ -170,12 +172,12 @@ class UI:
                         mode="lines+markers",
                         name="Data",
                         line={"color": color, "width": 2},
-                        marker={"color": "rgb(0, 0, 0)", "size": 2.5},
+                        marker={"color": color, "size": 2.5},
                     ),
                     row=2,
                     col=2,
                 )
-                r = 20
+                r = 30
                 x_map = r * np.sin(track_theta)*np.cos(track_phi)
                 y_map = r * np.sin(track_theta)*np.sin(track_phi)
                 lat_map, lon_map = self.convert_to_map(c_lon, c_lat, x_map, y_map)
@@ -184,7 +186,13 @@ class UI:
                         lon = lon_map,
                         lat = lat_map,
                         line={"color": color, "width": 3},
-                        marker={"color": "rgb(0, 0, 0)", "size": 3.5},))
+                        marker={"color": color, "size": 3.5},))
+
+                self.map_fig.add_trace(go.Scattermapbox(
+                        mode = "markers",
+                        lon = [c_lon],
+                        lat = [c_lat],
+                        marker={"color": "rgb(255, 0, 0)", "size": 5.5},))
 
 
 

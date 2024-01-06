@@ -16,7 +16,7 @@ from beamforming.kalman import KalmanFilter2D
 
 from utils.mic_array import make_fancy_circ_array
 from utils.sphere import create_sphere
-from utils.peakDetection import arg_max_detector
+from utils.peakDetection import arg_max_detector, peak_detector2
 
 
 
@@ -43,9 +43,10 @@ class KalmanTracker(Tracker):
         self.phi_m, self.r_m, self.coords = make_fancy_circ_array(self.n_mics, **arr_param)
 
         self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
-        self.sphere = sphere = create_sphere(1500)
-        self.phi = sphere["theta"]
-        self.theta = sphere["phi"]
+        self.sphere_size = 1500
+        self.sphere = sphere = create_sphere(self.sphere_size, 1.1) # Make spher sligthly bigger for peak detection
+        self.phi = sphere["phi"]
+        self.theta = sphere["theta"]
         self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
         self.max_blind_predict = 10
@@ -54,15 +55,36 @@ class KalmanTracker(Tracker):
         self.x = cos(self.phi) * self.r
         self.y = sin(self.phi) * self.r
 
+        self.peak_detector_mask = self.make_peak_detector_mask()
+
         self.objects = []
         self.colors = ["#fc3fc4",
+                        "#aa67c9",
+                        "#d636ab",
+                        "#3c801f",
+                        "#0abf6a",
+                        "#c27f32",
                         "#2ebac9",
                         "#fc723f",
                         "#33b039",
                         "#9d42cf",
                         "#155ca3",
                         "#6e8209",
-                        "#47ffd1"]
+                        "#47ffd1",
+                        "#72aab0"]
+
+
+    def get_sphere(self):
+        return self.phi[:self.sphere_size], self.theta[:self.sphere_size]
+
+    def make_peak_detector_mask(self):
+        grid_x, grid_y = np.mgrid[-1.6:1.6:160j, -1.6:1.6:160j]
+        mask = np.zeros_like(self.x)
+        mask[:self.sphere_size] = 1
+        grid = griddata(
+            (self.x, self.y), mask, (grid_x, grid_y), method="linear", fill_value = 0.5).T
+        mask = grid == 1
+        return mask
 
     def _convert_into_cartesian(self, index):
         phi = self.phi[index]
@@ -164,16 +186,18 @@ class KalmanTracker(Tracker):
         max_val = response[peaks[0]]
         response = response / response[peaks[0]]
 
-        grid_x, grid_y = np.mgrid[-1.6:1.6:150j, -1.6:1.6:150j]
+        grid_x, grid_y = np.mgrid[-1.6:1.6:160j, -1.6:1.6:160j]
         grid = griddata(
-            (self.x, self.y), response, (grid_x, grid_y), method="linear"
-        ).T
+            (self.x, self.y), response, (grid_x, grid_y), method="linear", fill_value = 0.5).T
         print(grid.dtype)
         grid = (grid * 255).astype(np.uint8)
+        peak_detector2(grid)
         cv.imwrite(f'./tmp/im{self.i}.png', grid)
+#         cv.imwrite(f'./tmp/hans{self.i}.png', grid)
         self.i += 1
 
         print('<><><><><><><><><>')
         print(self.objects[0].track[-1])
-        return response, peaks, self.objects, max_val, None
+        print(response.shape)
+        return response[:self.sphere_size], peaks, self.objects, max_val, None
 

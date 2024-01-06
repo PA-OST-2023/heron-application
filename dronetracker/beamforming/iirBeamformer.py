@@ -59,7 +59,7 @@ class IirBeamFormer:
         #     fb = fb_a * tracks
         #     response = np.sum(np.abs(np.sum(fb, axis=-2)[:, :, 50:200]) ** 2, axis=-1)
         signals = np.abs(np.sum(fb_a, axis=-2))  # [:, :, 25:100])
-        response = np.sum(signals**2, axis=-1)
+        response = np.sum(signals**2, axis=-1) / (self._f_high - self._f_low)
         return response
 
     def local_beam_sweep(self, signals, center_direction):

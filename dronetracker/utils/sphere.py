@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
 
-def create_sphere(num_pts,factor = 1.1, plot=False):
+def create_sphere(num_pts, factor=1.1, plot=False):
     tot_num_pts = factor * num_pts
     indices = arange(0, tot_num_pts, dtype=float)  # + 0.5
 
@@ -33,7 +33,6 @@ def transform_flat(theta, phi):
     z = cos(phi)
     import ipdb
 
-
     fig = go.Figure(
         data=[go.Mesh3d(z=(z), x=(x), y=(y), intensity=z, colorscale="Viridis")]
     )  # , opacity=0.5, color='rgba(244,22,100,0.6)')])
@@ -47,7 +46,7 @@ def transform_flat(theta, phi):
 #     plt.show()
 
 if __name__ == "__main__":
-    data = create_sphere(3000, factor=2,plot=True)
+    data = create_sphere(3000, factor=2, plot=True)
     phi = data["phi"]
     theta = data["theta"]
     transform_flat(theta, phi)

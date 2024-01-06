@@ -65,9 +65,9 @@ class ProtTracker(Tracker):
         block = block[:, self.mic_order]
         response = self.beamformer.global_beam_sweep(block)
         #         self.fig.data[0].z = response
-#         time.sleep(0.01)
+        #         time.sleep(0.01)
         peaks = arg_max_detector(response)
-#         maxi = np.unravel_index(np.argmax(response, axis=None), response.shape)
+        #         maxi = np.unravel_index(np.argmax(response, axis=None), response.shape)
         peaks_cartesian = [self._convert_into_cartesian(peak) for peak in peaks]
         maxi = peaks[0]
         pos = self._convert_into_cartesian(maxi)

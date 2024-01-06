@@ -70,9 +70,7 @@ def make_fancy_circ_array(n_mic, n_circ, shift, r_0, r_1, plot=False):
         ax.set_title("Circular Array")
         ax.grid(True)
         plt.show()
-    coords = (
-        np.vstack((cos(phi), sin(phi), np.zeros_like(phi))) * r
-    )
+    coords = np.vstack((cos(phi), sin(phi), np.zeros_like(phi))) * r
     return phi, r, coords
 
 

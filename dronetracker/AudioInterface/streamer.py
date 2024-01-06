@@ -1,7 +1,4 @@
-
-
 class Streamer:
-
     def __init__(self):
         pass
 
@@ -13,4 +10,3 @@ class Streamer:
 
     def get_block(self, block_size):
         pass
-

@@ -19,20 +19,19 @@ from utils.sphere import create_sphere
 from utils.peakDetection import arg_max_detector, peak_detector2
 
 
-
-
 @dataclass
 class Kalman_track_object:
-#     track_id: int
+    #     track_id: int
     track: np.ndarray
     k_filter: KalmanFilter2D
     color: str
-    n_predictions: int=0
+    n_predictions: int = 0
+
 
 class KalmanTracker(Tracker):
     i = 0
-    def __init__(self, config_file=None):
 
+    def __init__(self, config_file=None):
         print("Init Tracker")
 
         with open(config_file, "rb") as f:
@@ -40,49 +39,59 @@ class KalmanTracker(Tracker):
         self.n_mics = config["n_mic"]
         self.mic_order = config["mic_order"]
         arr_param = config.get("arr_param", None)
-        self.phi_m, self.r_m, self.coords = make_fancy_circ_array(self.n_mics, **arr_param)
+        self.phi_m, self.r_m, self.coords = make_fancy_circ_array(
+            self.n_mics, **arr_param
+        )
 
         self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
         self.sphere_size = 1500
-        self.sphere = sphere = create_sphere(self.sphere_size, 1.1) # Make spher sligthly bigger for peak detection
+        self.sphere = sphere = create_sphere(
+            self.sphere_size, 1.1
+        )  # Make spher sligthly bigger for peak detection
         self.phi = sphere["phi"]
         self.theta = sphere["theta"]
         self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
         self.max_blind_predict = 10
 
-        self.r = self.theta
-        self.x = cos(self.phi) * self.r
-        self.y = sin(self.phi) * self.r
+        r_projection = self.theta
+        self.x_projection = cos(self.phi) * r_projection
+        self.y_projection = sin(self.phi) * r_projection
 
         self.peak_detector_mask = self.make_peak_detector_mask()
 
         self.objects = []
-        self.colors = ["#fc3fc4",
-                        "#aa67c9",
-                        "#d636ab",
-                        "#3c801f",
-                        "#0abf6a",
-                        "#c27f32",
-                        "#2ebac9",
-                        "#fc723f",
-                        "#33b039",
-                        "#9d42cf",
-                        "#155ca3",
-                        "#6e8209",
-                        "#47ffd1",
-                        "#72aab0"]
-
+        self.colors = [
+            "#fc3fc4",
+            "#aa67c9",
+            "#d636ab",
+            "#3c801f",
+            "#0abf6a",
+            "#c27f32",
+            "#2ebac9",
+            "#fc723f",
+            "#33b039",
+            "#9d42cf",
+            "#155ca3",
+            "#6e8209",
+            "#47ffd1",
+            "#72aab0",
+        ]
 
     def get_sphere(self):
-        return self.phi[:self.sphere_size], self.theta[:self.sphere_size]
+        return self.phi[: self.sphere_size], self.theta[: self.sphere_size]
 
     def make_peak_detector_mask(self):
         grid_x, grid_y = np.mgrid[-1.6:1.6:160j, -1.6:1.6:160j]
-        mask = np.zeros_like(self.x)
-        mask[:self.sphere_size] = 1
+        mask = np.zeros_like(self.x_projection)
+        mask[: self.sphere_size] = 1
         grid = griddata(
-            (self.x, self.y), mask, (grid_x, grid_y), method="linear", fill_value = 0.5).T
+            (self.x_projection, self.y_projection),
+            mask,
+            (grid_x, grid_y),
+            method="linear",
+            fill_value=0.5,
+        ).T
         mask = grid == 1
         return mask
 
@@ -106,41 +115,50 @@ class KalmanTracker(Tracker):
         tracking_object.track = np.vstack((tracking_object.track, new_pos[:2]))
         tracking_object.n_predictions += 1
 
-    def _update_trackers(self, peaks, threshold = 0.3):
+    def _update_trackers(self, peaks, threshold=0.3):
         peaks_cartesian = [self._convert_into_cartesian(peak) for peak in peaks]
         if len(self.objects) == 0:
             for peak in peaks_cartesian:
                 kalman = self._create_kalman_object(peak)
-                self.objects.append(Kalman_track_object(
-                                    peak.reshape((-1,2)),
-                                    kalman,
-                                    self.colors.pop())
-                                    )
+                self.objects.append(
+                    Kalman_track_object(
+                        peak.reshape((-1, 2)), kalman, self.colors.pop()
+                    )
+                )
             return
 
         objects = []
         tracker_indices = [i for i in range(len(self.objects))]
         peak_indices = [i for i in range(len(peaks))]
-        tracker_positions = [track_object.k_filter.make_prediction()[:2] for track_object in self.objects]
+        tracker_positions = [
+            track_object.k_filter.make_prediction()[:2] for track_object in self.objects
+        ]
         cost_matrix = cdist(np.vstack(peaks_cartesian), np.vstack(tracker_positions))
 
         row_indices, col_indices = linear_sum_assignment(cost_matrix)
 
+        # Iterate through nearest peaks from munkres
         for peak_ind, tracker_ind in zip(row_indices, col_indices):
             tracker_indices.remove(tracker_ind)
             peak_indices.remove(peak_ind)
             peak_pos = peaks_cartesian[peak_ind]
             tracker_pos = tracker_positions[tracker_ind]
             tracking_object = self.objects[tracker_ind]
+
+            # is peak is to far away from assigned track, create new one, else continue tracking
             if np.linalg.norm(peak_pos - tracker_pos) < threshold:
                 new_pos = tracking_object.k_filter.run_filter(peak_pos)
                 tracking_object.track = np.vstack((tracking_object.track, new_pos[:2]))
                 tracking_object.n_predictions = 0
             else:
-
                 kalman = self._create_kalman_object(peak_pos)
-                objects.append(Kalman_track_object(peak_pos.reshape((-1,2)), kalman,self.colors.pop()))
+                objects.append(
+                    Kalman_track_object(
+                        peak_pos.reshape((-1, 2)), kalman, self.colors.pop()
+                    )
+                )
 
+                # if track ran too long on kalman without peak update, discard it
                 if tracking_object.n_predictions >= self.max_blind_predict:
                     self.colors.insert(0, tracking_object.color)
                     continue
@@ -158,28 +176,18 @@ class KalmanTracker(Tracker):
         for peak_ind in peak_indices:
             peak_pos = peaks_cartesian[peak_ind]
             kalman = self._create_kalman_object(peak_pos)
-            objects.append(Kalman_track_object(peak_pos.reshape((-1,2)), kalman,self.colors.pop()))
+            objects.append(
+                Kalman_track_object(
+                    peak_pos.reshape((-1, 2)), kalman, self.colors.pop()
+                )
+            )
 
         self.objects = objects
-        return
-        peak = peaks_cartesian[0]
-        predition = self.objects[0].k_filter.make_prediction()[:2]
-        if np.linalg.norm(peak-predition) < 0.3:
-            new_pos = self.objects[0].k_filter.run_filter(peak, 0)
-            self.objects[0].track = np.vstack((self.objects[0].track, new_pos[:2]))
-        else:
-            self.colors.insert(0, self.objects[0].color)
-            kalman = self._create_kalman_object(peak)
-            self.objects[0] = Kalman_track_object(peak.reshape((-1,2)), kalman,self.colors.pop())
-        return
-
-
 
     def track(self, block):
-        print("===========Tracker==========")
+        print("<><><><><><Tracker><><><><><><><><")
         block = block[:, self.mic_order]
         response = self.beamformer.global_beam_sweep(block)
-
 
         peaks = arg_max_detector(response)
         self._update_trackers(peaks)
@@ -188,16 +196,19 @@ class KalmanTracker(Tracker):
 
         grid_x, grid_y = np.mgrid[-1.6:1.6:160j, -1.6:1.6:160j]
         grid = griddata(
-            (self.x, self.y), response, (grid_x, grid_y), method="linear", fill_value = 0.5).T
-        print(grid.dtype)
-        grid = (grid * 255).astype(np.uint8)
-        peak_detector2(grid)
-        cv.imwrite(f'./tmp/im{self.i}.png', grid)
-#         cv.imwrite(f'./tmp/hans{self.i}.png', grid)
+            (self.x_projection, self.y_projection),
+            response,
+            (grid_x, grid_y),
+            method="linear",
+            fill_value=0.5,
+        ).T
+        #         peak_detector2(grid)
+
+        # For debugging Purposes
+        #         grid = (grid * 255).astype(np.uint8)
+        #         cv.imwrite(f'./tmp/im{self.i}.png', grid)
+        #         cv.imwrite(f'./tmp/hans{self.i}.png', grid)
         self.i += 1
 
-        print('<><><><><><><><><>')
-        print(self.objects[0].track[-1])
-        print(response.shape)
-        return response[:self.sphere_size], peaks, self.objects, max_val, None
-
+        print("<><><><><><Tracker Done><><><><><>")
+        return response[: self.sphere_size], peaks, self.objects, max_val, None

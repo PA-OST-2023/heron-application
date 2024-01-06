@@ -76,11 +76,13 @@ class TcpReciever:
                                     + headerSize
                                     + audioBlockSize
                                 ]
-#                                 print(audioData.shape)
+                                #                                 print(audioData.shape)
                                 dataBuffer = dataBuffer[headerIndex + packetSize :]
                                 if len(audioData) != audioBlockSize:
                                     continue
-                                decoded_data = np.frombuffer(audioData, dtype=np.int16).reshape(-1, 32)
+                                decoded_data = np.frombuffer(
+                                    audioData, dtype=np.int16
+                                ).reshape(-1, 32)
                                 self.buffer.append(decoded_data, decoded_data.shape[0])
 
                                 if lastPacketIndex == -1:
@@ -115,9 +117,9 @@ class TcpReciever:
                             else:
                                 print("Trying to re-establish connection: ", e, type(e))
                                 break
-#                         except Exception as e:
-#                             print("Trying to re-establish connection: ", e, type(e))
-#                             break
+            #                         except Exception as e:
+            #                             print("Trying to re-establish connection: ", e, type(e))
+            #                             break
 
             except (socket.timeout, TimeoutError, ConnectionRefusedError) as e:
                 pass
@@ -130,6 +132,6 @@ if __name__ == "__main__":
     buffer = RingBuffer(15, 32)
     reciever = TcpReciever(buffer)
     reciever.start()
-    print('<><>' * 100)
+    print("<><>" * 100)
     time.sleep(10)
     reciever.stop()

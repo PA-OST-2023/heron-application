@@ -1,10 +1,11 @@
 import numpy as np
 
 import sys
+
 sys.path.append("..")
 
-class Tracker():
 
+class Tracker:
     def __init__(self):
         print("Tracker Init")
 
@@ -13,4 +14,3 @@ class Tracker():
 
     def _make_partial_grid_search(self):
         pass
-

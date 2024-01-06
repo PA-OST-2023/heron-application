@@ -16,7 +16,7 @@ class KalmanFilter2D:
         )
         self.Qv = np.array([[Qv, 0], [0, Qv]])
         self.K = None
-#         self.x = np.zeros((4), dtype=np.float32)
+        #         self.x = np.zeros((4), dtype=np.float32)
         self.x = np.array([x_0, y_0, 0, 0], dtype=np.float32)
         pass
 

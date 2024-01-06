@@ -11,8 +11,8 @@ from AudioInterface.buffer import RingBuffer
 from AudioInterface.tcpReciever import TcpReciever
 from AudioInterface.streamer import Streamer
 
-class TcpStreamer(Streamer):
 
+class TcpStreamer(Streamer):
     def __init__(self, chanels=32):
         self._chanels = chanels
         self._buffer = RingBuffer(15, self._chanels)
@@ -29,7 +29,7 @@ class TcpStreamer(Streamer):
 
 
 if __name__ == "__main__":
-    print('Hi')
+    print("Hi")
     streamer = TcpStreamer()
     streamer.start_stream()
     time.sleep(20)

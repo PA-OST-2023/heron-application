@@ -146,7 +146,7 @@ class UI:
     def run(self):
         if self.streamer is not None:
             self.streamer.start_stream()
-        self.app.run(debug=True)
+        self.app.run(debug=False)
 
     def setup_callbacks(self):
         @callback(

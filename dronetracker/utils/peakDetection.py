@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+from math import degrees
 
 
 def peak_detector(im):
@@ -26,7 +27,7 @@ def peak_detector(im):
     pass
 
 
-def peak_detector2(im, area_mask=None, plot=False):
+def peak_detector2(im, area_mask=None,sphere_factor=1.1, plot=False):
     struct_element = cv.getStructuringElement(cv.MORPH_ELLIPSE, (10, 10))
     im1 = cv.dilate(im, struct_element, iterations=2)
     maxmask = im == im1
@@ -41,12 +42,33 @@ def peak_detector2(im, area_mask=None, plot=False):
     else:
         mask = maxmask & medmask
 
-    canvas = cv.cvtColor(im, cv.COLOR_GRAY2BGR)
-    y, x = np.nonzero(mask)
+    peaks_im = np.zeros_like(im,dtype=np.uint8)
+    peaks_im[mask] = 255
+    kernel = np.ones((3,3),np.uint8)
+    peaks_im = cv.morphologyEx(peaks_im, cv.MORPH_CLOSE, kernel)
+    output = cv.connectedComponentsWithStats(peaks_im, 8, cv.CV_32S)
+    (numLabels, labels, stats, centroids) = output
+    peaks = []
+    theta = 0
+    phi = 0
+    conversion_factor = np.pi/2 * sphere_factor / 79.5
+    print('<>'*30)
+    for center in centroids[1:]:
+        print("="*15)
+        print(center)
+        peak_cart = center - np.array([79.5, 79.5])
+        print(peak_cart)
+        theta = degrees(np.linalg.norm(peak_cart) * conversion_factor)
+        phi = degrees(np.arctan2(-peak_cart[1], peak_cart[0]))
+        print(f'{theta = }')
+        print(f'{phi = }')
+
     if plot:
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots(2, 3)
+        canvas = cv.cvtColor(im, cv.COLOR_GRAY2BGR)
+        y, x = np.nonzero(mask)
         canvas[y, x] = (0, 0, 255)
 
         ax[0][0].imshow(im)
@@ -63,7 +85,11 @@ def peak_detector2(im, area_mask=None, plot=False):
 
         ax[1][1].imshow(canvas)
         ax[1][1].set_title("pikse")
+
+        ax[1][2].imshow(peaks_im)
+        ax[1][2].set_title("pikse")
         plt.show()
+
     return
 
 
@@ -80,8 +106,9 @@ if __name__ == "__main__":
     from scipy.interpolate import griddata
 
     sphere_size = 1500
+    sphere_factor = 1.1
     sphere = create_sphere(
-        sphere_size, 1.1
+        sphere_size, sphere_factor
     )  # Make spher sligthly bigger for peak detection
     x = cos(sphere["phi"]) * sphere["theta"]
     y = sin(sphere["phi"]) * sphere["theta"]
@@ -98,4 +125,4 @@ if __name__ == "__main__":
     for i in range(80):
         im = cv.imread(f"./tmp/im{i}.png", cv.IMREAD_GRAYSCALE)  # 25
         print(im.dtype)
-        peak_detector2(im, mask, plot=True)
+        peak_detector2(im, mask, sphere_factor, plot=True)

@@ -135,7 +135,7 @@ class KalmanTracker(Tracker):
         tracking_object.track = np.vstack((tracking_object.track, new_pos[:2]))
         tracking_object.n_predictions += 1
 
-    def _update_trackers(self, peaks, threshold=0.3):
+    def _update_trackers(self, peaks, threshold=0.9):
         peaks_cartesian = [self._convert_into_cartesian(peak) for peak in peaks]
         if len(self.objects) == 0:
             for peak in peaks_cartesian:

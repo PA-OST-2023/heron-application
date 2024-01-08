@@ -22,12 +22,12 @@ class Application:
     def __init__(self):
         audio_file = Path(__file__).parent.parent / "data" / "random.wav"
         #         audio_file = Path(__file__).parent.parent / "data" / "dyn.wav"
-        self.streamer = self._setup_wav_streamer()
+#         self.streamer = self._setup_wav_streamer()
         self.block_len = 1024 * 2
         self.tracker = KalmanTracker(
             Path(__file__).parent / "configs" / "testfancy1.toml"
         )
-        self.ui = UI(self.tracker, self.streamer)
+        self.ui = UI(self.tracker, None)
 
     def _init_tracker(self):
         pass

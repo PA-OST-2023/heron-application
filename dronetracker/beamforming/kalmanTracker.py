@@ -34,14 +34,11 @@ class KalmanTracker(Tracker):
     def __init__(self, config_file=None):
         print("Init Tracker")
 
-        with open(config_file, "rb") as f:
-            config = tomli.load(f)
-        self.n_mics = config["n_mic"]
-        self.mic_order = config["mic_order"]
-        arr_param = config.get("arr_param", None)
-        self.phi_m, self.r_m, self.coords = make_fancy_circ_array(
-            self.n_mics, **arr_param
-        )
+        self.n_mics = None
+        self.mic_order = None
+        arr_param = None
+        self.phi_m, self.r_m, self.coords = (None, None, None)
+
 
         self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
         self.sphere_size = 1500
@@ -50,7 +47,6 @@ class KalmanTracker(Tracker):
         )  # Make spher sligthly bigger for peak detection
         self.phi = sphere["phi"]
         self.theta = sphere["theta"]
-        self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
         self.max_blind_predict = 10
 
@@ -77,6 +73,26 @@ class KalmanTracker(Tracker):
             "#47ffd1",
             "#72aab0",
         ]
+
+
+    def init_umbrella_array(self):
+        pass
+
+    def update_umbrella_array(self):
+        pass
+
+    def init_config_array(self, config_file):
+        with open(config_file, "rb") as f:
+            config = tomli.load(f)
+        self.n_mics = config["n_mic"]
+        self.mic_order = config["mic_order"]
+        arr_param = config.get("arr_param", None)
+        self.phi_m, self.r_m, self.coords = make_fancy_circ_array(
+            self.n_mics, **arr_param
+        )
+
+        self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
+        pass
 
     def get_sphere(self):
         return self.phi[: self.sphere_size], self.theta[: self.sphere_size]

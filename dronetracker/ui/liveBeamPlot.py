@@ -35,18 +35,22 @@ class UI:
         self.app.layout = html.Div(
             [
                 html.H2("HERON"),
-                html.Div([
-                            html.H3("INFOS"),
-                            html.P("Connection Type"),
-                            dcc.Dropdown(['IP', 'WAV'], 'IP', id='arr-type'),
-                            html.P("", id="arr-info-label"),
-                            dcc.Input(id='arr-info', type='text'),
-                            html.P("", id="arr-conf-label"),
-                            dcc.Input(id='arr-conf', type='text', style={'display': 'none'}),
-                            html.Button('connect', id='submit-val', n_clicks=0),
-                            html.P("", id="submit-out"),
-                         ],
-                    className="two columns"),
+                html.Div(
+                    [
+                        html.H3("INFOS"),
+                        html.P("Connection Type"),
+                        dcc.Dropdown(["IP", "WAV"], "IP", id="arr-type"),
+                        html.P("", id="arr-info-label"),
+                        dcc.Input(id="arr-info", type="text"),
+                        html.P("", id="arr-conf-label"),
+                        dcc.Input(
+                            id="arr-conf", type="text", style={"display": "none"}
+                        ),
+                        html.Button("connect", id="submit-val", n_clicks=0),
+                        html.P("", id="submit-out"),
+                    ],
+                    className="two columns",
+                ),
                 html.Div(
                     [
                         html.H3("Beams"),
@@ -126,42 +130,54 @@ class UI:
         )
 
     def run(self):
-
         if self.streamer is not None:
             self.streamer.start_stream()
         self.app.run(debug=False)
 
     def setup_callbacks(self):
         @callback(
-        [Output('arr-info-label', 'children'), Output('arr-conf-label', 'children'), Output('arr-conf', 'style'), Output('arr-info', 'value')],
-        Input('arr-type', 'value')
+            [
+                Output("arr-info-label", "children"),
+                Output("arr-conf-label", "children"),
+                Output("arr-conf", "style"),
+                Output("arr-info", "value"),
+                Output("arr-conf", "value"),
+            ],
+            Input("arr-type", "value"),
         )
         def update_output(value):
-            if value == 'IP':
-                return 'IP Adress', '', {'display': 'none'}
-            if value == 'WAV':
-                return 'Wave File path', 'Config', {'display': 'block'}, './data/random.wav'
-            return '', '', {'display': 'none'}
+            if value == "IP":
+                return "IP Adress", "", {"display": "none"}, "", ""
+            if value == "WAV":
+                return (
+                    "Wave File path",
+                    "Config",
+                    {"display": "block"},
+                    "./data/random.wav",
+                    str(Path(__file__).parent.parent / "configs" / "testfancy1.toml"),
+                )
 
+            return "", "", {"display": "none"}
 
         @callback(
-            Output('submit-out', 'children'),
-            Input('submit-val', 'n_clicks'),
-            [State('arr-info', 'value'), State('arr-type', 'value')],
-            prevent_initial_call=True
+            Output("submit-out", "children"),
+            Input("submit-val", "n_clicks"),
+            [State("arr-info", "value"), State("arr-type", "value"), State("arr-conf", "value")],
+            prevent_initial_call=True,
         )
-        def update_output(n_clicks, arr_info, arr_type):
-            if arr_type == 'IP':
-                pass # TODO
-            if arr_type == 'WAV':
+        def update_output(n_clicks, arr_info, arr_type, arr_conf):
+            if arr_type == "IP":
+                pass  # TODO
+            if arr_type == "WAV":
                 self.streamer = WavStreamer(arr_info, 1024 * 4)
                 self.streamers.append([self.streamer])
-                self.tracker = KalmanTracker(Path(__file__).parent.parent / "configs" / "testfancy1.toml")
+                self.tracker = KalmanTracker()
+                self.tracker.init_config_array(arr_conf)
                 self.trackers.append(self.tracker)
                 self.streamer.start_stream()
-                return 'started wav stream'
+                return "started wav stream"
 
-            return 'Ok Cool'
+            return "Ok Cool"
 
         # Multiple components can update everytime interval gets fired.
         @callback(
@@ -183,6 +199,7 @@ class UI:
                     [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
+            fig.update_layout(width=700, height=800, uirevision=1)
             if self.tracker is None and self.streamer is None:
                 return fig, self.map_fig
             block = self.streamer.get_block(self.block_len)
@@ -210,18 +227,18 @@ class UI:
                     [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
-            fig.add_trace(
-                go.Mesh3d(
-                    z=(response),
-                    x=(self.x),
-                    y=(self.y),
-                    intensity=response,
-                    colorscale="Viridis",
-                    showscale=False,
-                ),
-                row=1,
-                col=1,
-            )
+#             fig.add_trace(
+#                 go.Mesh3d(
+#                     z=(response),
+#                     x=(self.x),
+#                     y=(self.y),
+#                     intensity=response,
+#                     colorscale="Viridis",
+#                     showscale=False,
+#                 ),
+#                 row=1,
+#                 col=1,
+#             )
             fig.add_trace(
                 go.Mesh3d(
                     z=z, x=x, y=y, intensity=r, colorscale="Viridis", showscale=False
@@ -305,8 +322,8 @@ class UI:
             #                 col=2,
             #             )
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
-#             fig.update_layout(width=800, height=800, uirevision=1)
-            fig.update_layout(uirevision=1)
+#             fig.update_layout(uirevision=1)
+            fig.update_layout(width=700, height=800, uirevision=1)
             fig.update_yaxes(
                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
             )

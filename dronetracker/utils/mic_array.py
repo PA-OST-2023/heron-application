@@ -18,7 +18,7 @@ def convert_to_base_system(M, phi=+radians(22.5), r=0.095):
     pass
 
 
-def calculate_fancy_arm(gamma, z_o):
+def calculate_umbrella_array(gamma, z_o, plot=False):
     m_0 = np.array([0.101157, 0.039018, z_o])
     m_1 = np.array([0.145209, 0.099498, z_o])
     m_2 = np.array([0.17107, 0.177783, z_o])
@@ -27,20 +27,25 @@ def calculate_fancy_arm(gamma, z_o):
     r = R.from_rotvec(gamma * np.array([0, 1, 0]))
     M_tilde = r.apply(M)
     M_tilde = convert_to_base_system(M_tilde)
-    return populate_array(M_tilde)
+    return populate_array(M_tilde, plot)
     pass
 
 
-def populate_array(M_tilde):
+def populate_array(M_tilde, plot=False):
     Mall = np.empty((32, 3), np.float32)
     fig, ax = plt.subplots()
-    for i in range(8):
-        r = R.from_rotvec(i * 2 * pi / 8 * np.array([0, 0, 1]))
+    rots = np.roll(np.arange(8), 2)
+#     for i in range(8):
+    for i, j in enumerate(rots):
+        r = R.from_rotvec(-j * 2 * pi / 8 * np.array([0, 0, 1]))
         m_t = r.apply(M_tilde)
         Mall[4 * i : 4 * i + 4, :] = m_t
-        ax.scatter(m_t[:, 0], m_t[:, 1])
-    ax.axis("equal")
-    ax.grid()
+        if plot:
+            ax.scatter(m_t[:, 0], m_t[:, 1])
+    if plot:
+        ax.axis("equal")
+        ax.grid()
+        plt.show()
     return Mall
 
 
@@ -76,8 +81,10 @@ def make_fancy_circ_array(n_mic, n_circ, shift, r_0, r_1, plot=False):
 
 if __name__ == "__main__":
     import csv
-
-    with open("./gt/FancyArray_TestGeometry.csv", newline="") as csvfile:
+    from pathlib import Path
+    csv_path = Path(__file__).parent / 'gt' / 'FancyArray_TestGeometry.csv'
+#     with open("./gt/FancyArray_TestGeometry.csv", newline="") as csvfile:
+    with open(csv_path, newline="") as csvfile:
         # Create a DictReader object which interprets the first row as column titles
         csv_reader = csv.DictReader(csvfile)
         angles = []
@@ -98,10 +105,9 @@ if __name__ == "__main__":
             positions.append(np.array(pos_tmp))
 
     for angle, position in zip(angles, positions):
-        mics = calculate_fancy_arm(radians(angle), 0.01185 - 0.0016)
-        #         mics = calculate_fancy_arm(radians(angle),0.01185)
-        mic_c = mics[24:28] * 100
+        mics = calculate_umbrella_array(radians(angle), 0.01185 - 0.0016)
+        #         mics = calculate_umbrella_array(radians(angle),0.01185)
+        mic_c = mics[16:20] * 100
         print(mic_c)
         print(position)
         print("-" * 20)
-        plt.show()

@@ -13,6 +13,8 @@ class WavStreamer(Streamer):
     def __init__(self, audio_file, block_size):
         self.__audio_file = str(audio_file)
 
+        self.name = self.__audio_file.split('/')[-1]
+
         self.__block_size = block_size
 
         self.__wf = wave.open(self.__audio_file)

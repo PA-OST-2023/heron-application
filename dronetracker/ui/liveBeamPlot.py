@@ -17,6 +17,7 @@ from beamforming.prototypeTracker import Tracker
 from beamforming.kalmanTracker import KalmanTracker, Kalman_track_object
 from utils.maps import convert_to_map
 from AudioInterface.waveStreamer import WavStreamer
+from AudioInterface.tcpStreamer import TcpStreamer
 
 
 class UI:
@@ -37,17 +38,30 @@ class UI:
                 html.H2("HERON"),
                 html.Div(
                     [
-                        html.H3("INFOS"),
+                        html.H3("Connection"),
+                        html.H4("New Connection"),
                         html.P("Connection Type"),
                         dcc.Dropdown(["IP", "WAV"], "IP", id="arr-type"),
-                        html.P("", id="arr-info-label"),
-                        dcc.Input(id="arr-info", type="text"),
-                        html.P("", id="arr-conf-label"),
+                        html.P("IP Adress", id="arr-info-label"),
+                        dcc.Input(value="192.168.33.80", id="arr-info", type="text"),
+                        html.P("Port", id="arr-conf-label"),
                         dcc.Input(
-                            id="arr-conf", type="text", style={"display": "none"}
+                            value=6666,
+                            id="arr-conf",
+                            type="text",
+                            style={"display": "block"},
                         ),
                         html.Button("connect", id="submit-val", n_clicks=0),
                         html.P("", id="submit-out"),
+                        html.Div(style={"margin-top": "15px"}),
+                        html.H4("Open Connections"),
+                        html.Div(id="open-con-list"),
+                        html.Div(style={"margin-top": "15px"}),
+                        html.H4("Display Connections"),
+                        dcc.Dropdown(["None"], id="sel-con", disabled=False),
+                        html.P("Current Connection: None", id="curr-con"),
+                        html.Button("disconnect", id="dis-but"),
+                        html.P(id="dis-but-err"),
                     ],
                     className="two columns",
                 ),
@@ -132,7 +146,7 @@ class UI:
     def run(self):
         if self.streamer is not None:
             self.streamer.start_stream()
-        self.app.run(debug=False)
+        self.app.run(debug=True)
 
     def setup_callbacks(self):
         @callback(
@@ -140,44 +154,145 @@ class UI:
                 Output("arr-info-label", "children"),
                 Output("arr-conf-label", "children"),
                 Output("arr-conf", "style"),
+                Output("arr-conf", "type"),
                 Output("arr-info", "value"),
                 Output("arr-conf", "value"),
             ],
             Input("arr-type", "value"),
         )
-        def update_output(value):
+        def update_fields_cb(value):
             if value == "IP":
-                return "IP Adress", "", {"display": "none"}, "", ""
+                #                 return "IP Adress", "", {"display": "none"}, "", ""
+                return (
+                    "IP Adress",
+                    "Port",
+                    {"display": "block"},
+                    "number",
+                    "192.168.33.80",
+                    6666,
+                )
             if value == "WAV":
                 return (
                     "Wave File path",
                     "Config",
                     {"display": "block"},
+                    "text",
                     "./data/random.wav",
                     str(Path(__file__).parent.parent / "configs" / "testfancy1.toml"),
                 )
 
-            return "", "", {"display": "none"}
+            return "", "", {"display": "none"}, "number", "", ""
 
         @callback(
-            Output("submit-out", "children"),
+            [
+                Output("submit-out", "children"),
+                Output("open-con-list", "children"),
+                Output("sel-con", "options"),
+                Output("sel-con", "value"),
+                Output("curr-con", "children"),
+            ],
             Input("submit-val", "n_clicks"),
-            [State("arr-info", "value"), State("arr-type", "value"), State("arr-conf", "value")],
+            [
+                State("arr-info", "value"),
+                State("arr-type", "value"),
+                State("arr-conf", "value"),
+            ],
             prevent_initial_call=True,
         )
-        def update_output(n_clicks, arr_info, arr_type, arr_conf):
+        def open_connection_cb(n_clicks, arr_info, arr_type, arr_conf):
+            message = "Error"
             if arr_type == "IP":
+                for streamer in self.streamers:
+                    if streamer.name == arr_info:
+                        return (
+                            "IP alredy connected",
+                            html.Ul(
+                                [
+                                    html.Li(f"{streamer.name}")
+                                    for streamer in self.streamers
+                                ]
+                            ),
+                            [
+                                {"value": streamer.name, "label": streamer.name}
+                                for i, streamer in enumerate(self.streamers)
+                            ],
+                            self.streamer.name,
+                            f"Current Connection: {self.streamer.name}",
+                        )
+
+                self.streamer = TcpStreamer(arr_info, port=arr_conf)
+                self.streamers.append(self.streamer)
+
+                self.tracker = KalmanTracker()
+                self.tracker.init_umbrella_array(arr_conf)
+                self.trackers.append(self.tracker)
+                self.streamer.start_stream()
+                message = "Connected to ip"
                 pass  # TODO
             if arr_type == "WAV":
                 self.streamer = WavStreamer(arr_info, 1024 * 4)
-                self.streamers.append([self.streamer])
+                self.streamers.append(self.streamer)
                 self.tracker = KalmanTracker()
                 self.tracker.init_config_array(arr_conf)
                 self.trackers.append(self.tracker)
                 self.streamer.start_stream()
-                return "started wav stream"
+                message = "Connectet to Wav"
+            curr_streamer_name = "None"
+            if self.streamer is not None:
+                curr_streamer_name = self.streamer.name
+            return (
+                message,
+                html.Ul([html.Li(f"{streamer.name}") for streamer in self.streamers]),
+                [{"value": streamer.name, "label": streamer.name} for i, streamer in enumerate(self.streamers)],
+                curr_streamer_name,
+                f"Current Connection: {curr_streamer_name}")
 
-            return "Ok Cool"
+        @callback(
+            [
+                Output("open-con-list", "children", allow_duplicate=True),
+                Output("sel-con", "options", allow_duplicate=True),
+                Output("sel-con", "value", allow_duplicate=True),
+                Output("curr-con", "children", allow_duplicate=True),
+                Output("dis-but-err", "children"),
+            ],
+            Input("dis-but", "n_clicks"),
+            [
+                State("sel-con", "value"),
+            ],
+            prevent_initial_call=True,
+        )
+        def close_conn_cb(n_clicks, conn):
+            streamer_ind = -1
+            curr_streamer_name = "none"
+            for i, streamer in enumerate(self.streamers):
+                if streamer.name != conn:
+                    continue
+                streamer_ind = i
+                streamer.end_stream()
+            if streamer_ind == -1:
+                print('SHIT')
+                return (
+                        html.Ul([html.Li(f"{streamer.name}") for streamer in self.streamers]),
+                        [{"value": streamer.name, "label": streamer.name} for i, streamer in enumerate(self.streamers)],
+                        "",
+                        f"Current Connection: {curr_streamer_name}",
+                        "No Streamer to close")
+            self.trackers.pop(streamer_ind)
+            self.streamers.pop(streamer_ind)
+            del self.streamer
+            del self.tracker
+            self.streamer = None
+            self.tracker = None
+            if len(self.streamers) > 0:
+                self.streamer = self.streamers[0]
+                curr_streamer_name = self.streamer.name
+            return  (
+                    html.Ul([html.Li(f"{streamer.name}") for streamer in self.streamers]),
+                    [{"value": streamer.name, "label": streamer.name} for i, streamer in enumerate(self.streamers)],
+                    "",
+                    f"Current Connection: {curr_streamer_name}",
+                    "Streamer closed")
+
 
         # Multiple components can update everytime interval gets fired.
         @callback(
@@ -227,18 +342,18 @@ class UI:
                     [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
-#             fig.add_trace(
-#                 go.Mesh3d(
-#                     z=(response),
-#                     x=(self.x),
-#                     y=(self.y),
-#                     intensity=response,
-#                     colorscale="Viridis",
-#                     showscale=False,
-#                 ),
-#                 row=1,
-#                 col=1,
-#             )
+            #             fig.add_trace(
+            #                 go.Mesh3d(
+            #                     z=(response),
+            #                     x=(self.x),
+            #                     y=(self.y),
+            #                     intensity=response,
+            #                     colorscale="Viridis",
+            #                     showscale=False,
+            #                 ),
+            #                 row=1,
+            #                 col=1,
+            #             )
             fig.add_trace(
                 go.Mesh3d(
                     z=z, x=x, y=y, intensity=r, colorscale="Viridis", showscale=False
@@ -322,7 +437,7 @@ class UI:
             #                 col=2,
             #             )
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
-#             fig.update_layout(uirevision=1)
+            #             fig.update_layout(uirevision=1)
             fig.update_layout(width=700, height=800, uirevision=1)
             fig.update_yaxes(
                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1

@@ -6,6 +6,7 @@ from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 from scipy.interpolate import griddata
 import cv2 as cv
+from math import radians
 
 import sys
 
@@ -14,7 +15,7 @@ from beamforming.tracker import Tracker
 from beamforming.iirBeamformer import IirBeamFormer
 from beamforming.kalman import KalmanFilter2D
 
-from utils.mic_array import make_fancy_circ_array
+from utils.mic_array import make_fancy_circ_array, calculate_umbrella_array
 from utils.sphere import create_sphere
 from utils.peakDetection import arg_max_detector, peak_detector2
 
@@ -75,8 +76,12 @@ class KalmanTracker(Tracker):
         ]
 
 
-    def init_umbrella_array(self):
-        pass
+    def init_umbrella_array(self, config=None):
+        angle = 0
+        self.n_mics = 32
+        self.mic_order = np.arange(self.n_mics)
+        self.coords = calculate_umbrella_array(radians(angle), 0.01185 - 0.0016).T
+        self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
     def update_umbrella_array(self):
         pass
@@ -92,7 +97,6 @@ class KalmanTracker(Tracker):
         )
 
         self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
-        pass
 
     def get_sphere(self):
         return self.phi[: self.sphere_size], self.theta[: self.sphere_size]

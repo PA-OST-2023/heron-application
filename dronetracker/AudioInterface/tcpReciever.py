@@ -12,9 +12,9 @@ from AudioInterface.buffer import RingBuffer
 
 
 class TcpReciever:
-    def __init__(self, buffer):
-        self.host = "192.168.33.80"
-        self.port = 6666
+    def __init__(self, ip_addr, buffer, port=6666):
+        self.host = ip_addr
+        self.port = port
         self.tcp_conn_timeout = 5.0
         self.buffer = buffer
         self._running = False

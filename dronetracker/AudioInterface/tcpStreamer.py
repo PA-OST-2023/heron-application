@@ -13,10 +13,11 @@ from AudioInterface.streamer import Streamer
 
 
 class TcpStreamer(Streamer):
-    def __init__(self, chanels=32):
+    def __init__(self,ip_addr, port=6666, chanels=32):
+        self.name = ip_addr
         self._chanels = chanels
         self._buffer = RingBuffer(15, self._chanels)
-        self._tcp_reciever = TcpReciever(self._buffer)
+        self._tcp_reciever = TcpReciever(ip_addr, self._buffer)
 
     def start_stream(self):
         self._tcp_reciever.start()

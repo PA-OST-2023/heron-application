@@ -33,8 +33,9 @@ def calculate_umbrella_array(gamma, z_o, plot=False):
 
 def populate_array(M_tilde, plot=False):
     Mall = np.empty((32, 3), np.float32)
-    fig, ax = plt.subplots()
     rots = np.roll(np.arange(8), 2)
+    if plot:
+        fig, ax = plt.subplots()
 #     for i in range(8):
     for i, j in enumerate(rots):
         r = R.from_rotvec(-j * 2 * pi / 8 * np.array([0, 0, 1]))

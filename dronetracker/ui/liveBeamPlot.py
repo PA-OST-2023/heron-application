@@ -351,11 +351,11 @@ class UI:
             # TODO Make object field
             fig = make_subplots(
                 rows=2,
-                cols=2,
+                cols=1,
                 specs=[
-                    [{"type": "mesh3d"}, {"type": "mesh3d"}],
-                    #                     [{'type':'scatter'}, {'type': 'heatmap'}]]
-                    [{"type": "scatter"}, {"type": "scatter"}],
+                    [{"type": "mesh3d"}],
+                    [{"type": "mesh3d"}],
+#                     [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
             info_div = html.Div()
@@ -401,15 +401,6 @@ class UI:
 #             x = self.x_sphere
 #             y = self.y_sphere
 #             z = self.z_sphere
-            fig = make_subplots(
-                rows=2,
-                cols=2,
-                specs=[
-                    [{"type": "mesh3d"}, {"type": "mesh3d"}],
-                    #                     [{'type':'scatter'}, {'type': 'heatmap'}]]
-                    [{"type": "scatter"}, {"type": "scatter"}],
-                ],
-            )
             fig.add_trace(
                 go.Mesh3d(
                     z=(response),
@@ -428,25 +419,9 @@ class UI:
                 go.Mesh3d(
                     z=self.z_sphere, x=self.x_sphere, y=self.y_sphere, intensity=response, colorscale="Viridis", showscale=False, cmin=0, cmax=1,
                 ),
-                row=1,
-                col=2,
+                row=2,
+                col=1,
             )
-            for tracking_object in tracking_objects:
-                x_data = tracking_object.track[:, 0]
-                y_data = tracking_object.track[:, 1]
-                color = tracking_object.color
-                fig.add_trace(
-                    go.Scatter(
-                        x=x_data,
-                        y=y_data,
-                        mode="lines+markers",
-                        name="Data",
-                        line={"color": color, "width": 2},
-                        marker={"color": color, "size": 2.5},
-                    ),
-                    row=2,
-                    col=1,
-                )
 
             self.map_fig.data = []
 #             c_lon = 8.8191
@@ -461,18 +436,6 @@ class UI:
                 track_phi = np.arctan2(y_data, x_data)
                 track_theta = np.sqrt(y_data**2 + x_data**2)
 
-#                 fig.add_trace(
-#                     go.Scatter(
-#                         x=track_phi * 180 / np.pi,
-#                         y=track_theta * 180 / np.pi,
-#                         mode="lines+markers",
-#                         name="Data",
-#                         line={"color": color, "width": 2},
-#                         marker={"color": color, "size": 2.5},
-#                     ),
-#                     row=2,
-#                     col=2,
-#                 )
                 r = 30
                 x_map = r * np.sin(track_theta) * np.cos(track_phi)
                 y_map = r * np.sin(track_theta) * np.sin(track_phi)
@@ -496,37 +459,31 @@ class UI:
                 )
             )
 
-            fig.add_trace(
-                go.Scatter(
-#                     x= [1,0,-1,0],
-                    y= self.max_vals,
-                    mode="lines+markers",
-                    name="Data",
-                    line={"color": "rgb(0, 255, 0)"},
-                    marker={"color": "rgb(0, 255, 0)", "size": 8},
-                ),
-                row=2,
-                col=2,
-            )
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
             #             fig.update_layout(uirevision=1)
 
-            camera = dict(
+            camera1 = dict(
+                up=dict(x=0, y=0, z=1),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=-1, y=-1, z=1.5)
+            )
+            camera2 = dict(
                 up=dict(x=0, y=1, z=0),
                 center=dict(x=0, y=0, z=0),
                 eye=dict(x=0, y=0, z=2)
             )
             fig.update_yaxes(range=[-1.7, 1.7], row=1, col=1)
             fig.update_xaxes(range=[-1.7, 1.7], row=1, col=1)
-            fig.update_layout(width=700, height=800, uirevision=1)
-            fig.update_yaxes(
-                range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
-            )
             fig.update_scenes(zaxis_range=[0, 1.1], row=1, col=1)
-            fig.update_xaxes(range=[-1.7, 1.7], row=2, col=1)
-            fig.update_yaxes(range=[0, 90], row=2, col=2)
-            fig.update_xaxes(range=[-180, 180], row=2, col=2)
-            fig.layout.scene2.camera =camera
+            fig.update_layout(width=700, height=800, uirevision=1)
+#             fig.update_yaxes(
+#                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
+#             )
+#             fig.update_xaxes(range=[-1.7, 1.7], row=2, col=1)
+#             fig.update_yaxes(range=[0, 90], row=2, col=2)
+#             fig.update_xaxes(range=[-180, 180], row=2, col=2)
+            fig.layout.scene2.camera =camera2
+            fig.layout.scene1.camera =camera1
             fig.update_layout(showlegend=False)
 
             return fig, self.map_fig, html.Div(info_div, style={"border-top": "solid black", "border-bottom": "solid black"})

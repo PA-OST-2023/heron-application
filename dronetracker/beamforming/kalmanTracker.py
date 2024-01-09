@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-from numpy import cos, sin
+from numpy import cos, sin, pi
 import tomli
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
@@ -35,10 +35,13 @@ class KalmanTracker(Tracker):
     def __init__(self, config_file=None, **kwargs):
         print("Init Tracker")
 
+        self.angle = None
         self.n_mics = None
         self.mic_order = None
         arr_param = None
         self.phi_m, self.r_m, self.coords = (None, None, None)
+
+        self.angle_thresh = kwargs.get("angle_thresh", 2)
 
 
         self.block_len = kwargs.get("block_len", 2048)
@@ -62,6 +65,12 @@ class KalmanTracker(Tracker):
         self.y_projection = sin(self.phi) * r_projection
 
         self.peak_detector_mask = self.make_peak_detector_mask()
+        self.peak_det_settings = kwargs.get("peak_det_settings", None)
+
+
+        self.alpha_gnss = kwargs.get("alpha_gnss", 0.9)
+        self.c_lon = 8.8189
+        self.c_lat = 47.22321
 
         self.objects = []
         self.colors = [
@@ -103,15 +112,29 @@ class KalmanTracker(Tracker):
         ]
 
 
-    def init_umbrella_array(self, config=None):
-        angle = 0
+    def init_umbrella_array(self, angle=0, lat=None, lon=None):
+        if lon is not None and lat is not None:
+            self.c_lat = lat
+            self.c_lon = lon
         self.n_mics = 32
+        self.angle = angle
         self.mic_order = np.arange(self.n_mics)
         self.coords = calculate_umbrella_array(radians(angle), 0.01185 - 0.0016).T
         self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
-    def update_umbrella_array(self):
-        pass
+    def update_umbrella_array(self, angle):
+        print("======= Update Umbrella Angle ======")
+        self.coords = calculate_umbrella_array(radians(angle), 0.01185 - 0.0016).T
+        self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
+        self.angle = angle
+        print("====== Update Done ======")
+
+    def needs_update(self, angle):
+        return (np.abs(angle - self.angle) > self.angle_thresh)
+
+    def update_pos(self, lat, lon):
+        self.lat = self.lat * self.alpha_gnss + lat *(1-self.alpha_gnss)
+        self.lon = self.lon * self.alpha_gnss + lon *(1-self.alpha_gnss)
 
     def init_config_array(self, config_file):
         with open(config_file, "rb") as f:
@@ -238,7 +261,12 @@ class KalmanTracker(Tracker):
 
         self.objects = objects
 
-    def track(self, block):
+    def do_compass_correction(self, angle, peaks):
+#         angle = 2*pi - angle
+        R = np.array([[cos(angle), -sin(angle)], [sin(angle), cos(angle)]])
+        return [R @ peak for peak in peaks]
+
+    def track(self, block, compass_angle=0):
         print("<><><><><><Tracker><><><><><><><><")
         block = block[:, self.mic_order]
         response = self.beamformer.global_beam_sweep(block)
@@ -255,7 +283,11 @@ class KalmanTracker(Tracker):
             fill_value=0.5,
         ).T
         grid_cv = (grid/ np.max(grid) * 255).astype(np.uint8)
-        peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, min_height=10, max_height=1000, )
+        peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
+        print(peaks)
+        print(compass_angle)
+        peaks = self.do_compass_correction(compass_angle, peaks)
+#         peaks = self.do_compass_correction(0, peaks)
 
         self._update_trackers(peaks)
         # For debugging Purposes
@@ -264,6 +296,7 @@ class KalmanTracker(Tracker):
         #         cv.imwrite(f'./tmp/hans{self.i}.png', grid)
         self.i += 1
 
-        response = response / max(max_val, 10) # max Value
+        response = response / max(max_val, 20) # max Value
+#         response = response /  # max Value
         print("<><><><><><Tracker Done><><><><><>")
         return response[: self.sphere_size], peaks, self.objects, max_val, None

@@ -19,6 +19,7 @@ from utils.maps import convert_to_map
 from AudioInterface.waveStreamer import WavStreamer
 from AudioInterface.tcpStreamer import TcpStreamer
 from ui.layout import make_layout
+from utils.communication import Communication
 
 class UI:
     def __init__(self, streamer_settings, tracker_settings, json_port=6667):
@@ -26,6 +27,7 @@ class UI:
 
         self.streamer_settings = streamer_settings
         self.tracker_settings = tracker_settings
+        self.is_recording = False
 
         self.json_port = json_port
 
@@ -45,8 +47,12 @@ class UI:
 
         self.streamers = []
         self.trackers = []
+        self.communicators = []
+        self.communicator = None
         self.tracker = None
         self.streamer = None
+        self.angle = None
+
 
         self.x_hat = []
         self.y_hat = []
@@ -96,6 +102,14 @@ class UI:
             mapbox_center_lon=center_lon,
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
         )
+
+    def generate_info(self, data):
+        content = []
+        content.append(html.P(f'Temperature: {data["sensor_temperature"]:.2f}'))
+        content.append(html.P(f'Air Pressure: {data["sensor_pressure"]:.2f}'))
+        content.append(html.P(f'GNSS Satelites: {data["gnss_satelite_count"]:.2f}'))
+        content.append(html.P(f'Streaming Speed: {data["streaming_speed"]:.2f}'))
+        return content
 
     def run(self):
         if self.streamer is not None:
@@ -172,8 +186,25 @@ class UI:
                             f"Current Connection: {self.streamer.name}",
                         )
 
+                self.communicator = Communication()
+                self.communicator.start(arr_info, arr_conf + 1)
+                self.communicators.append(self.communicator)
+
+                data = None
+                while data is None:
+                    data = self.communicator.getData()
+
+                angle = data["sensor_angle"]
+
+                lat, lon = (None, None)
+                if data["gnss_fix"]:
+                    lat = data["gnss_latitude"]
+                    lon = data["gnss_longitude"]
+
+                compass_angle = data["sensor_heading"]
+
                 self.tracker = KalmanTracker(**self.tracker_settings)
-                self.tracker.init_umbrella_array(arr_conf)
+                self.tracker.init_umbrella_array(radians(angle), lat=lat, lon=lon)
                 self._update_plot_coordinates()
 
                 self.streamer = TcpStreamer(arr_info, port=arr_conf)
@@ -191,6 +222,8 @@ class UI:
                 self.streamer = WavStreamer(arr_info, 1024 * 4)
                 self.streamers.append(self.streamer)
                 self.streamer.start_stream()
+                self.communicator = None
+                self.communicators.append(None)
                 message = "Connectet to Wav"
             curr_streamer_name = "None"
             if self.streamer is not None:
@@ -227,6 +260,10 @@ class UI:
                         "Connection not available")
             self.tracker =self.trackers[streamer_ind]
             self.streamer =self.streamers[streamer_ind]
+            if isinstance(self.streamer, TcpStreamer):
+                self.communicator = self.communicators[streamer_ind]
+            else:
+                self.communicator = None
             self._update_plot_coordinates()
             return  (
                     f"Current Connection: {self.streamer.name}",
@@ -262,6 +299,12 @@ class UI:
                         "No Streamer to close")
             self.trackers.pop(streamer_ind)
             self.streamers.pop(streamer_ind)
+            self.communicators.pop(streamer_ind)
+
+            if isinstance(self.streamer, TcpStreamer):
+                self.communicator.stop()
+                del self.communicator
+            self.communicator = None
             del self.streamer
             del self.tracker
             self.streamer = None
@@ -277,12 +320,29 @@ class UI:
                     f"Current Connection: {curr_streamer_name}",
                     "Streamer closed")
 
+        @callback(
+            Output("rec-but", "children", allow_duplicate=True),
+            Input("rec-but", "n_clicks"),
+            prevent_initial_call=True,
+        )
+        def record(n):
+
+            if self.is_recording and self.streamer is not None:
+                self.streamer.stop_recording()
+                self.is_recording = False
+                return ("Start Recording")
+            elif self.streamer is not None:
+                self.streamer.start_recording('./out.wav')
+                self.is_recording = True
+                return ("Stop Recording")
+            return ("Start Recording")
 
         # Multiple components can update everytime interval gets fired.
         @callback(
             [
                 Output(component_id="live-beam-plots", component_property="figure"),
                 Output(component_id="live-update-graph", component_property="figure"),
+                Output("div-info", "children"),
             ],
             Input("beam-plots", "n_intervals"),
         )
@@ -298,9 +358,33 @@ class UI:
                     [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
+            info_div = html.Div()
             fig.update_layout(width=700, height=800, uirevision=1)
             if self.tracker is None or self.streamer is None:
-                return fig, self.map_fig
+                return fig, self.map_fig, html.Div([html.P()])
+
+            if self.communicator is not None:
+                self.communicator.getData()
+
+                data = None
+                while data is None:
+                    data = self.communicator.getData()
+                angle = data["sensor_angle"]
+                if self.tracker.needs_update(angle):
+                    tracker = self.tracker
+                    self.tracker = None
+                    tracker.update_umbrella_array(angle)
+                    self.tracker = tracker
+
+                if data["gnss_fix"]:
+                    self.tracker.update_pos(data["gnss_latitude"], data["gnss_longitude"])
+
+                compass_angle = -1 * radians(data["sensor_heading"])
+                info_div = self.generate_info(data)
+            else:
+                angle = 0
+                compass_angle = 0
+
             block = self.streamer.get_block(self.block_len)
             if block is None:
                 print("----Done---")
@@ -310,13 +394,13 @@ class UI:
                 del self.tracker
                 self.tracker = None
                 self.streamer = None
-                return fig, self.map_fig
-            response, meas, tracking_objects, max_val, *_ = self.tracker.track(block)
+                return fig, self.map_fig, html.Div(info_div)
+            response, meas, tracking_objects, max_val, *_ = self.tracker.track(block, compass_angle)
             self.max_vals.append(max_val)
-            r = response
-            x = self.x_sphere
-            y = self.y_sphere
-            z = self.z_sphere
+#             r = response
+#             x = self.x_sphere
+#             y = self.y_sphere
+#             z = self.z_sphere
             fig = make_subplots(
                 rows=2,
                 cols=2,
@@ -326,21 +410,23 @@ class UI:
                     [{"type": "scatter"}, {"type": "scatter"}],
                 ],
             )
-            #             fig.add_trace(
-            #                 go.Mesh3d(
-            #                     z=(response),
-            #                     x=(self.x),
-            #                     y=(self.y),
-            #                     intensity=response,
-            #                     colorscale="Viridis",
-            #                     showscale=False,
-            #                 ),
-            #                 row=1,
-            #                 col=1,
-            #             )
             fig.add_trace(
                 go.Mesh3d(
-                    z=z, x=x, y=y, intensity=r, colorscale="Viridis", showscale=False
+                    z=(response),
+                    x=(self.x),
+                    y=(self.y),
+                    intensity=response,
+                    colorscale="Viridis",
+                    showscale=False,
+                    cmin=0,
+                    cmax=1
+                ),
+                row=1,
+                col=1,
+            )
+            fig.add_trace(
+                go.Mesh3d(
+                    z=self.z_sphere, x=self.x_sphere, y=self.y_sphere, intensity=response, colorscale="Viridis", showscale=False, cmin=0, cmax=1,
                 ),
                 row=1,
                 col=2,
@@ -363,8 +449,10 @@ class UI:
                 )
 
             self.map_fig.data = []
-            c_lon = 8.8191
-            c_lat = 47.22324
+#             c_lon = 8.8191
+#             c_lat = 47.22324
+            c_lon = 8.8189
+            c_lat = 47.22321
 
             for tracking_object in tracking_objects:
                 x_data = tracking_object.track[:, 0]
@@ -399,14 +487,14 @@ class UI:
                     )
                 )
 
-                self.map_fig.add_trace(
-                    go.Scattermapbox(
-                        mode="markers",
-                        lon=[c_lon],
-                        lat=[c_lat],
-                        marker={"color": "rgb(255, 0, 0)", "size": 5.5},
-                    )
+            self.map_fig.add_trace(
+                go.Scattermapbox(
+                    mode="markers",
+                    lon=[self.tracker.c_lon],
+                    lat=[self.tracker.c_lat],
+                    marker={"color": "rgb(255, 0, 0)", "size": 5.5},
                 )
+            )
 
             fig.add_trace(
                 go.Scatter(
@@ -422,16 +510,26 @@ class UI:
             )
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
             #             fig.update_layout(uirevision=1)
+
+            camera = dict(
+                up=dict(x=0, y=1, z=0),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=0, y=0, z=2)
+            )
+            fig.update_yaxes(range=[-1.7, 1.7], row=1, col=1)
+            fig.update_xaxes(range=[-1.7, 1.7], row=1, col=1)
             fig.update_layout(width=700, height=800, uirevision=1)
             fig.update_yaxes(
                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
             )
+            fig.update_scenes(zaxis_range=[0, 1.1], row=1, col=1)
             fig.update_xaxes(range=[-1.7, 1.7], row=2, col=1)
             fig.update_yaxes(range=[0, 90], row=2, col=2)
             fig.update_xaxes(range=[-180, 180], row=2, col=2)
+            fig.layout.scene2.camera =camera
             fig.update_layout(showlegend=False)
 
-            return fig, self.map_fig
+            return fig, self.map_fig, html.Div(info_div, style={"border-top": "solid black", "border-bottom": "solid black"})
 
 
 if __name__ == "__main__":

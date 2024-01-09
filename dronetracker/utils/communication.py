@@ -35,8 +35,9 @@ class Communication:
                     s.settimeout(1.0)  # Set a timeout
                     s.connect((self.ip, self.port))
                     try:
-                        self.data = self.send_http_request(s, "/", "GET")         # Send GET request and print response
-
+                        data = self.send_http_request(s, "/", "GET")         # Send GET request and print response
+                        json_data = data.split('\r\n\r\n')[-1]
+                        self.data = json.loads(json_data)
                         if(self.outgoingCommands):
                             outDict = {}
                             for command in self.outgoingCommands:
@@ -81,7 +82,10 @@ if __name__ == "__main__":
 
     t0 = time.time()
     while True:
-        print(com.getData())
+        data = com.getData()
+        if data:
+            print(data)
+#         print(com.getData())
         time.sleep(1)
         if(time.time() - t0 > 10):
             break

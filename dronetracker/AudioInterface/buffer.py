@@ -1,4 +1,5 @@
 import numpy as np
+import wave
 from time import sleep
 import threading
 
@@ -44,7 +45,7 @@ class RingBuffer:
             self.head = (self.head + size) & self.ringMask
             self._readCondition.notify_all()
 
-            if _write_to_wav:
+            if self._write_to_wav:
                 self._wavfile.writeframes(item.tobytes())
 
     #             print(self.get_available())
@@ -77,15 +78,15 @@ class RingBuffer:
         return self.size
 
     def start_recording(self, fname):
-        self._wavfile = wave.open(fname)
+        self._wavfile = wave.open(fname, "wb")
         self._wavfile.setframerate(44100)
         self._wavfile.setnchannels(32)
         self._wavfile.setsampwidth(2)
         self._write_to_wav = True
 
-    def end_record(self):
-        self._wavfile.close()
+    def stop_recording(self):
         self._write_to_wav = False
+        self._wavfile.close()
 
 
 if __name__ == "__main__":

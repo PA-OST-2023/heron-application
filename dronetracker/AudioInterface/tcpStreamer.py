@@ -28,6 +28,12 @@ class TcpStreamer(Streamer):
     def get_block(self, block_size):
         return self._buffer.get_n(block_size)
 
+    def start_recording(self, fname):
+        self._buffer.start_recording(fname)
+
+    def stop_recording(self):
+        self._buffer.stop_recording()
+
 
 if __name__ == "__main__":
     print("Hi")

@@ -110,5 +110,6 @@ if __name__ == "__main__":
         #         mics = calculate_umbrella_array(radians(angle),0.01185)
         mic_c = mics[16:20] * 100
         print(mic_c)
+        print(mics)
         print(position)
         print("-" * 20)

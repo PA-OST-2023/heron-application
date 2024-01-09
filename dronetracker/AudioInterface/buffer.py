@@ -19,6 +19,8 @@ class RingBuffer:
         self._readCondition = threading.Condition()
         #         import ipdb; ipdb.set_trace()
         self._isReadReady = False
+        self._write_to_wav = False
+        self._wavfile = None
 
     def is_empty(self):
         return self.size == 0
@@ -41,6 +43,9 @@ class RingBuffer:
             self._data[self.head : self.head + size] = item
             self.head = (self.head + size) & self.ringMask
             self._readCondition.notify_all()
+
+            if _write_to_wav:
+                self._wavfile.writeframes(item.tobytes())
 
     #             print(self.get_available())
     #             print(f'{self.head = }')
@@ -70,6 +75,17 @@ class RingBuffer:
 
     def get_size(self):
         return self.size
+
+    def start_recording(self, fname):
+        self._wavfile = wave.open(fname)
+        self._wavfile.setframerate(44100)
+        self._wavfile.setnchannels(32)
+        self._wavfile.setsampwidth(2)
+        self._write_to_wav = True
+
+    def end_record(self):
+        self._wavfile.close()
+        self._write_to_wav = False
 
 
 if __name__ == "__main__":

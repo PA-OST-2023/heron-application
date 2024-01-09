@@ -24,10 +24,20 @@ class Application:
         #         audio_file = Path(__file__).parent.parent / "data" / "dyn.wav"
 #         self.streamer = self._setup_wav_streamer()
         self.block_len = 1024 * 2
-        self.tracker = KalmanTracker(
-            Path(__file__).parent / "configs" / "testfancy1.toml"
-        )
-        self.ui = UI(self.tracker, None)
+        beamformer_settings = {"f_low": 500,
+                                "f_high": 2000,
+                                "f_s": 44100}
+        peak_detector_settings = {"min_height": 10,
+                        "max_height": 2**15,
+                        "rel_max": 0.2}
+        streamer_settings = {}
+        tracker_settings = {"block_len": self.block_len,
+                "sphere_size": 1500,
+                "sphere_factor": 1.1,
+                "max_blinf_predict": 10}
+        tracker_settings['beamformer_settings'] = beamformer_settings
+        tracker_settings['peak_det_settings'] = peak_detector_settings
+        self.ui = UI(streamer_settings, tracker_settings)
 
     def _init_tracker(self):
         pass

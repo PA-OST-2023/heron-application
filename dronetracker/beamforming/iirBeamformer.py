@@ -11,7 +11,7 @@ class IirBeamFormer:
 
     i = 0
 
-    def __init__(self, block_len, f_low, f_high, f_s, v_m):
+    def __init__(self, block_len, f_low, f_high, f_s, v_m=340):
         self._block_len = block_len
         self._f_low = int(2 * block_len / f_s * f_low)
         self._f_high = int(2 * block_len / f_s * f_high)
@@ -20,7 +20,8 @@ class IirBeamFormer:
         self.audio = []
         pass
 
-    def compute_angled_filterbank(self, coord, phi, theta):
+    def compute_angled_filterbank(self, coord, phi, theta, vm=340):
+        self._vm = vm
         angles = np.vstack((-phi, pi / 2 - theta)).reshape(-1, 2)
         angles = np.vstack((-phi, pi / 2 - theta)).swapaxes(0, 1)
         #         angles = np.vstack((pi/2 - theta,-phi)).reshape(-1,2)

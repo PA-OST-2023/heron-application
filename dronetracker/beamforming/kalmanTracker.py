@@ -32,7 +32,7 @@ class Kalman_track_object:
 class KalmanTracker(Tracker):
     i = 0
 
-    def __init__(self, config_file=None):
+    def __init__(self, config_file=None, **kwargs):
         print("Init Tracker")
 
         self.n_mics = None
@@ -41,16 +41,21 @@ class KalmanTracker(Tracker):
         self.phi_m, self.r_m, self.coords = (None, None, None)
 
 
-        self.beamformer = IirBeamFormer(1024, 500, 2000, 44100, 335)
-        self.sphere_size = 1500
-        self.sphere_factor = 1.1 # how much more than the semisphere
+        self.block_len = kwargs.get("block_len", 2048)
+
+#         self.beamformer = IirBeamFormer(self.block_len // 2, 500, 2000, 44100, 335)
+        self.beamformer = IirBeamFormer(self.block_len // 2, **kwargs.get("beamformer_settings", None))
+
+        self.sphere_size = kwargs.get("sphere_size", 1500)
+        self.sphere_factor = kwargs.get("sphere_factor", 1.1) # how much more than the semisphere
         self.sphere = sphere = create_sphere(
             self.sphere_size, self.sphere_factor
         )  # Make spher sligthly bigger for peak detection
         self.phi = sphere["phi"]
         self.theta = sphere["theta"]
 
-        self.max_blind_predict = 10
+        self.max_blind_predict = kwargs.get("max_blind_predict", 10)
+        self.tracker_threshold = kwargs.get("tracker_threshold", 1)
 
         r_projection = self.theta
         self.x_projection = cos(self.phi) * r_projection
@@ -157,7 +162,7 @@ class KalmanTracker(Tracker):
         tracking_object.track = np.vstack((tracking_object.track, new_pos[:2]))
         tracking_object.n_predictions += 1
 
-    def _update_trackers(self, peaks, threshold=0.9, convert_to_cartesian=False):
+    def _update_trackers(self, peaks, convert_to_cartesian=False):
         # If argmax peak detector, the index of the 1d response array 
         # must be converted into cartesian coordinates
         peaks_cartesian = peaks
@@ -193,7 +198,7 @@ class KalmanTracker(Tracker):
                 tracking_object = self.objects[tracker_ind]
 
                 # is peak is to far away from assigned track, create new one, else continue tracking
-                if np.linalg.norm(peak_pos - tracker_pos) < threshold:
+                if np.linalg.norm(peak_pos - tracker_pos) < self.tracker_threshold:
                     new_pos = tracking_object.k_filter.run_filter(peak_pos)
                     tracking_object.track = np.vstack((tracking_object.track, new_pos[:2]))
                     tracking_object.n_predictions = 0
@@ -212,6 +217,7 @@ class KalmanTracker(Tracker):
                     self._make_blind_prediciton(tracking_object)
                 objects.append(tracking_object)
 
+        # Iterate through all existing trackers, that didnt match previously
         for tracker_ind in tracker_indices:
             tracking_object = self.objects[tracker_ind] # TODO Errors
             if tracking_object.n_predictions >= self.max_blind_predict:
@@ -220,6 +226,7 @@ class KalmanTracker(Tracker):
             self._make_blind_prediciton(tracking_object)
             objects.append(tracking_object)
 
+        # Create a new tracker for each peak, that wasn't used previously
         for peak_ind in peak_indices:
             peak_pos = peaks_cartesian[peak_ind]
             kalman = self._create_kalman_object(peak_pos)

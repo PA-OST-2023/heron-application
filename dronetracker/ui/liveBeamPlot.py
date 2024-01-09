@@ -18,10 +18,15 @@ from beamforming.kalmanTracker import KalmanTracker, Kalman_track_object
 from utils.maps import convert_to_map
 from AudioInterface.waveStreamer import WavStreamer
 from AudioInterface.tcpStreamer import TcpStreamer
-
+from ui.layout import make_layout
 
 class UI:
-    def __init__(self, tracker=None, streamer=None):
+    def __init__(self, streamer_settings, tracker_settings):
+        self.block_len = tracker_settings.get("block_len", 2048)
+
+        self.streamer_settings = streamer_settings
+        self.tracker_settings = tracker_settings
+
         self.layout = go.Layout(
             autosize=False,
             width=900,
@@ -33,75 +38,26 @@ class UI:
         self._setup_map()
 
         self.app = Dash(__name__, external_stylesheets=external_stylesheets)
-        self.app.layout = html.Div(
-            [
-                html.H2("HERON"),
-                html.Div(
-                    [
-                        html.H3("Connection"),
-                        html.H4("New Connection"),
-                        html.P("Connection Type"),
-                        dcc.Dropdown(["IP", "WAV"], "IP", id="arr-type"),
-                        html.P("IP Adress", id="arr-info-label"),
-                        dcc.Input(value="192.168.33.80", id="arr-info", type="text"),
-                        html.P("Port", id="arr-conf-label"),
-                        dcc.Input(
-                            value=6666,
-                            id="arr-conf",
-                            type="text",
-                            style={"display": "block"},
-                        ),
-                        html.Button("connect", id="submit-val", n_clicks=0),
-                        html.P("", id="submit-out"),
-                        html.Div(style={"margin-top": "15px"}),
-                        html.H4("Open Connections"),
-                        html.Div(id="open-con-list"),
-                        html.Div(style={"margin-top": "15px"}),
-                        html.H4("Display Connections"),
-                        dcc.Dropdown(["None"], id="sel-con", disabled=False),
-                        html.P("Current Connection: None", id="curr-con"),
-                        html.Button("disconnect", id="dis-but"),
-                        html.P(id="dis-but-err"),
-                    ],
-                    className="two columns",
-                ),
-                html.Div(
-                    [
-                        html.H3("Beams"),
-                        dcc.Graph(id="live-beam-plots"),
-                        dcc.Interval(
-                            id="beam-plots",
-                            interval=1.75 * 100,  # in milliseconds
-                            n_intervals=0,
-                        ),
-                    ],
-                    className="five columns",
-                ),
-                html.Div(
-                    [
-                        html.H3("Map"),
-                        dcc.Graph(figure=self.map_fig, id="live-update-graph"),
-                    ],
-                    className="four columns",
-                ),
-            ]
-        )
+        self.app.layout = make_layout(self.map_fig)
         self.setup_callbacks()
 
         self.streamers = []
         self.trackers = []
-        self.tracker = tracker
-        self.streamer = streamer
         self.tracker = None
         self.streamer = None
 
-        self.phi_beamsearch_sphere, self.theta_beamsearch_sphere = tracker.get_sphere()
+        self.x_hat = []
+        self.y_hat = []
+        self.max_vals = []
+
+
+    def _update_plot_coordinates(self):
+        self.phi_beamsearch_sphere, self.theta_beamsearch_sphere = self.tracker.get_sphere()
 
         r_flat_proj = self.theta_beamsearch_sphere
         self.x = cos(self.phi_beamsearch_sphere) * r_flat_proj
         self.y = sin(self.phi_beamsearch_sphere) * r_flat_proj
 
-        self.block_len = 1024 * 2
 
         self.x_sphere = sin(self.theta_beamsearch_sphere) * cos(
             self.phi_beamsearch_sphere
@@ -110,10 +66,6 @@ class UI:
             self.phi_beamsearch_sphere
         )
         self.z_sphere = cos(self.theta_beamsearch_sphere)
-
-        self.x_hat = []
-        self.y_hat = []
-        self.max_vals = []
 
     def _setup_map(self):
         r_earth = 6371e3
@@ -188,7 +140,6 @@ class UI:
                 Output("submit-out", "children"),
                 Output("open-con-list", "children"),
                 Output("sel-con", "options"),
-                Output("sel-con", "value"),
                 Output("curr-con", "children"),
             ],
             Input("submit-val", "n_clicks"),
@@ -216,25 +167,27 @@ class UI:
                                 {"value": streamer.name, "label": streamer.name}
                                 for i, streamer in enumerate(self.streamers)
                             ],
-                            self.streamer.name,
                             f"Current Connection: {self.streamer.name}",
                         )
 
+                self.tracker = KalmanTracker(**self.tracker_settings)
+                self.tracker.init_umbrella_array(arr_conf)
+                self._update_plot_coordinates()
+
                 self.streamer = TcpStreamer(arr_info, port=arr_conf)
                 self.streamers.append(self.streamer)
-
-                self.tracker = KalmanTracker()
-                self.tracker.init_umbrella_array(arr_conf)
                 self.trackers.append(self.tracker)
                 self.streamer.start_stream()
                 message = "Connected to ip"
                 pass  # TODO
             if arr_type == "WAV":
-                self.streamer = WavStreamer(arr_info, 1024 * 4)
-                self.streamers.append(self.streamer)
-                self.tracker = KalmanTracker()
+                self.tracker = KalmanTracker(**self.tracker_settings)
                 self.tracker.init_config_array(arr_conf)
                 self.trackers.append(self.tracker)
+                self._update_plot_coordinates()
+
+                self.streamer = WavStreamer(arr_info, 1024 * 4)
+                self.streamers.append(self.streamer)
                 self.streamer.start_stream()
                 message = "Connectet to Wav"
             curr_streamer_name = "None"
@@ -244,14 +197,44 @@ class UI:
                 message,
                 html.Ul([html.Li(f"{streamer.name}") for streamer in self.streamers]),
                 [{"value": streamer.name, "label": streamer.name} for i, streamer in enumerate(self.streamers)],
-                curr_streamer_name,
                 f"Current Connection: {curr_streamer_name}")
+
+        @callback(
+            [
+#                 Output("open-con-list", "children", allow_duplicate=True),
+#                 Output("sel-con", "options", allow_duplicate=True),
+#                 Output("sel-con", "value", allow_duplicate=True),
+                Output("curr-con", "children", allow_duplicate=True),
+                Output("dis-but-err", "children", allow_duplicate=True),
+            ],
+            Input("sel-con", "value"),
+            prevent_initial_call=True,
+        )
+        def switch_conn(conn):
+            print("/|"*200)
+            print(conn)
+            streamer_ind = -1
+            curr_streamer_name = self.streamer.name
+            for i, streamer in enumerate(self.streamers):
+                if streamer.name != conn:
+                    continue
+                streamer_ind = i
+            if streamer_ind == -1:
+                return (
+                        f"Current Connection: {curr_streamer_name}",
+                        "Connection not available")
+            self.tracker =self.trackers[streamer_ind]
+            self.streamer =self.streamers[streamer_ind]
+            self._update_plot_coordinates()
+            return  (
+                    f"Current Connection: {self.streamer.name}",
+                    "Streamer changed")
+
 
         @callback(
             [
                 Output("open-con-list", "children", allow_duplicate=True),
                 Output("sel-con", "options", allow_duplicate=True),
-                Output("sel-con", "value", allow_duplicate=True),
                 Output("curr-con", "children", allow_duplicate=True),
                 Output("dis-but-err", "children"),
             ],
@@ -270,11 +253,9 @@ class UI:
                 streamer_ind = i
                 streamer.end_stream()
             if streamer_ind == -1:
-                print('SHIT')
                 return (
                         html.Ul([html.Li(f"{streamer.name}") for streamer in self.streamers]),
                         [{"value": streamer.name, "label": streamer.name} for i, streamer in enumerate(self.streamers)],
-                        "",
                         f"Current Connection: {curr_streamer_name}",
                         "No Streamer to close")
             self.trackers.pop(streamer_ind)
@@ -285,11 +266,12 @@ class UI:
             self.tracker = None
             if len(self.streamers) > 0:
                 self.streamer = self.streamers[0]
+                self.tracker = self.trackers[0]
+                self._update_plot_coordinates()
                 curr_streamer_name = self.streamer.name
             return  (
                     html.Ul([html.Li(f"{streamer.name}") for streamer in self.streamers]),
                     [{"value": streamer.name, "label": streamer.name} for i, streamer in enumerate(self.streamers)],
-                    "",
                     f"Current Connection: {curr_streamer_name}",
                     "Streamer closed")
 
@@ -315,7 +297,7 @@ class UI:
                 ],
             )
             fig.update_layout(width=700, height=800, uirevision=1)
-            if self.tracker is None and self.streamer is None:
+            if self.tracker is None or self.streamer is None:
                 return fig, self.map_fig
             block = self.streamer.get_block(self.block_len)
             if block is None:

@@ -27,7 +27,9 @@ def peak_detector(im):
     pass
 
 
-def peak_detector2(im, area_mask=None,sphere_factor=1.1, plot=False):
+def peak_detector2(im, val_array=None, area_mask=None,sphere_factor=1.1, min_height=0, max_height=2**15, rel_max= 0.2, plot=False):
+    if val_array is None:
+        val_array = im
     struct_element = cv.getStructuringElement(cv.MORPH_ELLIPSE, (10, 10))
     im1 = cv.dilate(im, struct_element, iterations=2)
     maxmask = im == im1
@@ -52,16 +54,26 @@ def peak_detector2(im, area_mask=None,sphere_factor=1.1, plot=False):
     theta = 0
     phi = 0
     conversion_factor = np.pi/2 * sphere_factor / 79.5
-    print('<>'*30)
-    for center in centroids[1:]:
-        print("="*15)
-        print(center)
+    max_value = np.max(val_array[area_mask])
+#     print('<>'*30)
+    for i, center in enumerate(centroids[1:]):
+#         print("="*15)
+#         print(center)
+        peak_val = np.max(val_array[labels==i+1])
+        if peak_val < min_height or peak_val > max_height or peak_val < max_value * rel_max:
+            continue
         peak_cart = center - np.array([79.5, 79.5])
-        print(peak_cart)
-        theta = degrees(np.linalg.norm(peak_cart) * conversion_factor)
-        phi = degrees(np.arctan2(-peak_cart[1], peak_cart[0]))
-        print(f'{theta = }')
-        print(f'{phi = }')
+#         print(peak_cart)
+        theta = np.linalg.norm(peak_cart) * conversion_factor
+        phi = np.arctan2(peak_cart[1], peak_cart[0])
+        print(degrees(phi))
+        peak_norm = peak_cart * conversion_factor
+        peak_t = np.array([peak_norm[0], peak_norm[1]])
+
+#         print(f'{theta = }')
+#         print(f'{phi = }')
+        print("Peak Detected")
+        peaks.append(peak_t)
 
     if plot:
         import matplotlib.pyplot as plt
@@ -90,7 +102,7 @@ def peak_detector2(im, area_mask=None,sphere_factor=1.1, plot=False):
         ax[1][2].set_title("pikse")
         plt.show()
 
-    return
+    return peaks
 
 
 def arg_max_detector(x):
@@ -125,4 +137,4 @@ if __name__ == "__main__":
     for i in range(80):
         im = cv.imread(f"./tmp/im{i}.png", cv.IMREAD_GRAYSCALE)  # 25
         print(im.dtype)
-        peak_detector2(im, mask, sphere_factor, plot=True)
+        peak_detector2(im, area_mask=mask, sphere_factor=sphere_factor, min_height=100, plot=True)

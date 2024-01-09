@@ -51,7 +51,7 @@ class IirBeamFormer:
 
     def global_beam_sweep(self, block):
         #         self.audio.append(block)
-        tracks = fft(block.T, axis=-1)
+        tracks = fft(block.T, axis=-1) / (2*self._block_len)
         tracks = tracks[: self._block_len]
         print("calc...")
         fb_a = self.minFb * tracks[:, self._f_low : self._f_high]
@@ -60,7 +60,7 @@ class IirBeamFormer:
         #     response = np.sum(np.abs(np.sum(fb, axis=-2)[:, :, 50:200]) ** 2, axis=-1)
         signals = np.abs(np.sum(fb_a, axis=-2))  # [:, :, 25:100])
         response = np.sum(signals**2, axis=-1) / (self._f_high - self._f_low)
-        return response
+        return np.sqrt(response)
 
     def local_beam_sweep(self, signals, center_direction):
         pass

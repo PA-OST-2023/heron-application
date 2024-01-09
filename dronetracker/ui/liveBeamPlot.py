@@ -71,7 +71,7 @@ class UI:
                         dcc.Graph(id="live-beam-plots"),
                         dcc.Interval(
                             id="beam-plots",
-                            interval=1 * 100,  # in milliseconds
+                            interval=1.75 * 100,  # in milliseconds
                             n_intervals=0,
                         ),
                     ],
@@ -389,18 +389,18 @@ class UI:
                 track_phi = np.arctan2(y_data, x_data)
                 track_theta = np.sqrt(y_data**2 + x_data**2)
 
-                fig.add_trace(
-                    go.Scatter(
-                        x=track_phi * 180 / np.pi,
-                        y=track_theta * 180 / np.pi,
-                        mode="lines+markers",
-                        name="Data",
-                        line={"color": color, "width": 2},
-                        marker={"color": color, "size": 2.5},
-                    ),
-                    row=2,
-                    col=2,
-                )
+#                 fig.add_trace(
+#                     go.Scatter(
+#                         x=track_phi * 180 / np.pi,
+#                         y=track_theta * 180 / np.pi,
+#                         mode="lines+markers",
+#                         name="Data",
+#                         line={"color": color, "width": 2},
+#                         marker={"color": color, "size": 2.5},
+#                     ),
+#                     row=2,
+#                     col=2,
+#                 )
                 r = 30
                 x_map = r * np.sin(track_theta) * np.cos(track_phi)
                 y_map = r * np.sin(track_theta) * np.sin(track_phi)
@@ -424,18 +424,18 @@ class UI:
                     )
                 )
 
-            #             fig.add_trace(
-            #                 go.Scatter(
-            # #                     x= [1,0,-1,0],
-            #                     y= self.max_vals,
-            #                     mode="lines+markers",
-            #                     name="Data",
-            #                     line={"color": "rgb(0, 255, 0)"},
-            #                     marker={"color": "rgb(0, 255, 0)", "size": 8},
-            #                 ),
-            #                 row=2,
-            #                 col=2,
-            #             )
+            fig.add_trace(
+                go.Scatter(
+#                     x= [1,0,-1,0],
+                    y= self.max_vals,
+                    mode="lines+markers",
+                    name="Data",
+                    line={"color": "rgb(0, 255, 0)"},
+                    marker={"color": "rgb(0, 255, 0)", "size": 8},
+                ),
+                row=2,
+                col=2,
+            )
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
             #             fig.update_layout(uirevision=1)
             fig.update_layout(width=700, height=800, uirevision=1)

@@ -1,66 +1,88 @@
 import socket
 import json
+import threading
 import time
 
-def send_http_request(s, path, method, data=None):
-    # Prepare the request
-    request = f"{method} {path} HTTP/1.1\r\nHost: {s.getsockname()[0]}\r\n"
-    if data:
-        request += "Content-Type: application/json\r\n"
-        request += f"Content-Length: {len(data)}\r\n"
-    request += "\r\n"
-    if data:
-        request += data
+class Communication:
+    def __init__(self, update_interval = 1.0):
+        self.ip = None
+        self.port = None
+        self.running = False
+        self.update_interval = update_interval
+        self.data = None
+        self.outgoingCommands = []
 
-    # Send the request
-    s.sendall(request.encode())
+    def start(self, ip, port = 6667):
+        self.ip = ip
+        self.port = port
+        self.running = True
+        self.thread = threading.Thread(target=self.update)
+        self.thread.start()
 
-    # Receive the response
-    response = s.recv(4096).decode()
-    return response
+    def stop(self):
+        self.running = False
 
-def read_json(ip):
-    ip = "192.168.33.80"
-    port = 6667
-    path = "/"
-    index = 0
+    def getData(self):
+        return self.data
 
-    once = True
+    def sendCommand(self, command, value):
+        self.outgoingCommands.append((command, value))
 
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(1.0)  # Set a timeout
-            s.connect((ip, port))
-
+    def update(self):
+        while self.running:
             try:
-                # Send GET request and print response
-                response = send_http_request(s, path, "GET")
-                print(f"GET Response: {response}")
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(1.0)  # Set a timeout
+                    s.connect((self.ip, self.port))
+                    try:
+                        self.data = self.send_http_request(s, "/", "GET")         # Send GET request and print response
 
-                # Send POST request with JSON data
-                json_data = json.dumps({"index": index})
-                response = send_http_request(s, path, "POST", json_data)
-                print(f"POST Response: {response}")
+                        if(self.outgoingCommands):
+                            outDict = {}
+                            for command in self.outgoingCommands:
+                                outDict[command[0]] = command[1]
+                            json_data = json.dumps(outDict)
+                            response = self.send_http_request(s, "/", "POST", json_data)
 
-                return response
-
-                except OSError as e:
-                    if(e.strerror == "Stream closed"):
-                        print("Stream closed")
-                        s.shutdown(socket.SHUT_RDWR)
-                    else:
+                    except OSError as e:
+                        if(e.strerror == "Stream closed"):
+                            print("Stream closed")
+                            s.shutdown(socket.SHUT_RDWR)
+                        else:
+                            print("Trying to re-establish connection: ", e, type(e))
+                        return None
+                    except Exception as e:
                         print("Trying to re-establish connection: ", e, type(e))
-                    return None
-                except Exception as e:
-                    print("Trying to re-establish connection: ", e, type(e))
-                    return None
+                        return None
 
-    except (socket.timeout, TimeoutError, ConnectionRefusedError) as e:
-        pass
-    except KeyboardInterrupt:
-        print("Terminating")
-    return None
+            except (socket.timeout, TimeoutError, ConnectionRefusedError) as e:
+                pass
+            except KeyboardInterrupt:
+                print("Terminating")
+            time.sleep(1 / self.update_interval)
 
-    return
+
+    def send_http_request(self, s, path, method, data=None):
+        request = f"{method} {path} HTTP/1.1\r\nHost: {s.getsockname()[0]}\r\n"     # Prepare the request
+        if data:
+            request += "Content-Type: application/json\r\n"
+            request += f"Content-Length: {len(data)}\r\n"
+        request += "\r\n"
+        if data:
+            request += data
+        s.sendall(request.encode())             # Send the request
+        response = s.recv(4096).decode()        # Receive the response
+        return response
+
+
 if __name__ == "__main__":
-    main()
+    com = Communication()
+    com.start("192.168.33.80", 6667)
+
+    t0 = time.time()
+    while True:
+        print(com.getData())
+        time.sleep(1)
+        if(time.time() - t0 > 10):
+            break
+    com.stop()

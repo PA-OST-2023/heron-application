@@ -21,11 +21,13 @@ from AudioInterface.tcpStreamer import TcpStreamer
 from ui.layout import make_layout
 
 class UI:
-    def __init__(self, streamer_settings, tracker_settings):
+    def __init__(self, streamer_settings, tracker_settings, json_port=6667):
         self.block_len = tracker_settings.get("block_len", 2048)
 
         self.streamer_settings = streamer_settings
         self.tracker_settings = tracker_settings
+
+        self.json_port = json_port
 
         self.layout = go.Layout(
             autosize=False,

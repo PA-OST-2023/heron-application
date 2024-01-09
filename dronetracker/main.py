@@ -29,7 +29,7 @@ class Application:
                                 "f_s": 44100}
         peak_detector_settings = {"min_height": 10,
                         "max_height": 2**15,
-                        "rel_max": 0.2}
+                        "rel_max": 0.1}
         streamer_settings = {}
         tracker_settings = {"block_len": self.block_len,
                 "sphere_size": 1500,
@@ -37,7 +37,8 @@ class Application:
                 "max_blinf_predict": 10}
         tracker_settings['beamformer_settings'] = beamformer_settings
         tracker_settings['peak_det_settings'] = peak_detector_settings
-        self.ui = UI(streamer_settings, tracker_settings)
+        json_port = 6667
+        self.ui = UI(streamer_settings, tracker_settings, json_port)
 
     def _init_tracker(self):
         pass

@@ -53,7 +53,7 @@ def peak_detector2(im, val_array=None, area_mask=None,sphere_factor=1.1, min_hei
     peaks = []
     theta = 0
     phi = 0
-    conversion_factor = np.pi/2 * sphere_factor / 79.5
+    conversion_factor = np.pi/2 * sphere_factor / (im.shape[0]/2)
     max_value = np.max(val_array[area_mask])
 #     print('<>'*30)
     for i, center in enumerate(centroids[1:]):
@@ -62,7 +62,7 @@ def peak_detector2(im, val_array=None, area_mask=None,sphere_factor=1.1, min_hei
         peak_val = np.max(val_array[labels==i+1])
         if peak_val < min_height or peak_val > max_height or peak_val < max_value * rel_max:
             continue
-        peak_cart = center - np.array([79.5, 79.5])
+        peak_cart = center - np.array([im.shape[0]/2, im.shape[0]/2])
 #         print(peak_cart)
         theta = np.linalg.norm(peak_cart) * conversion_factor
         phi = np.arctan2(peak_cart[1], peak_cart[0])
@@ -108,10 +108,12 @@ def peak_detector2(im, val_array=None, area_mask=None,sphere_factor=1.1, min_hei
 def arg_max_detector(x):
     return [np.unravel_index(np.argmax(x), x.shape)]
 
-def arg_max_detector2(x):
-    conversion_factor = np.pi/2 * 1.1 / 79.5
-    max_value = np.unravel_index(np.argmax(x), x.shape)
-    peak_cart = max_value - np.array([79.5, 79.5])
+def arg_max_detector2(x, min_height=10):
+    conversion_factor = np.pi/2 * 1.1 / (im.shape[0] / 2) 
+    max_value_arg = np.unravel_index(np.argmax(x), x.shape)
+    if x[max_value_arg] < min_height:
+        return  []
+    peak_cart = max_value_arg - np.array([im.shape[0] / 2, im.shape[0] / 2])
     peak_norm = peak_cart * conversion_factor
     peak_t = np.array([peak_norm[1], peak_norm[0]])
     return [peak_t]

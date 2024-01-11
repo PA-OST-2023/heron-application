@@ -112,6 +112,7 @@ class UI:
         content.append(html.P(f'GNSS Satelites: {data["gnss_satelite_count"]:.2f}'))
         content.append(html.P(f'Streaming Speed: {data["streaming_speed"]:.2f}'))
         content.append(html.P(f'Used Array Angle: {self.tracker.angle:.2f}'))
+        content.append(html.P(f'Sound Speed: {self.tracker.v_m:.2f}'))
         return content
 
     def run(self):
@@ -203,9 +204,13 @@ class UI:
                 if data["gnss_fix"]:
                     lat = data["gnss_latitude"]
                     lon = data["gnss_longitude"]
+                temperature = data["sensor_temperature"]
 
                 compass_angle = data["sensor_heading"]
 
+                self.vm = 331 * np.sqrt(1 + temperature / 273)
+
+                self.tracker_settings["v_m"] = self.vm
                 self.tracker = KalmanTracker(**self.tracker_settings)
                 self.tracker.init_umbrella_array(radians(angle), lat=lat, lon=lon)
                 self._update_plot_coordinates()
@@ -447,8 +452,10 @@ class UI:
                 color = tracking_object.color
                 track_phi = np.arctan2(y_data, x_data)
                 track_theta = np.sqrt(y_data**2 + x_data**2)
-                positions_div_content.append(html.P(f'Phi:   {degrees(track_phi[-1]):.2f}', style={"color": color}))
-                positions_div_content.append(html.P(f'Theta: {degrees(track_theta[-1]):.2f}', style={"color": color}))
+                positions_div_content.append(
+                        html.P(f'Phi:   {degrees(track_phi[-1]):.2f}', style={"color": color}))
+                positions_div_content.append(
+                        html.P(f'Theta: {degrees(track_theta[-1]):.2f}', style={"color": color}))
                 r = 30
                 x_map = r * np.sin(track_theta) * np.cos(track_phi)
                 y_map = r * np.sin(track_theta) * np.sin(track_phi)

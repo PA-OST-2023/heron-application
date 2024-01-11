@@ -28,6 +28,7 @@ class Kalman_track_object:
     k_filter: KalmanFilter2D
     color: str
     n_predictions: int = 0
+    fname: str = ""
 
 
 class KalmanTracker(Tracker):
@@ -36,8 +37,8 @@ class KalmanTracker(Tracker):
     def __init__(self, config_file=None, **kwargs):
         print("Init Tracker")
         current_datetime = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-        datetime_str = str(current_datetime)
-        self.out_file = f'./out/{datetime_str}.csv'
+        self.datetime_str = str(current_datetime)
+        self.out_file = f'./out/{self.datetime_str}.csv'
         with open(self.out_file, 'w') as f:
             pass
 
@@ -52,8 +53,10 @@ class KalmanTracker(Tracker):
 
         self.block_len = kwargs.get("block_len", 2048)
 
+
+        self.v_m = kwargs.get("v_m", 332)
 #         self.beamformer = IirBeamFormer(self.block_len // 2, 500, 2000, 44100, 335)
-        self.beamformer = IirBeamFormer(self.block_len // 2, **kwargs.get("beamformer_settings", None))
+        self.beamformer = IirBeamFormer(self.block_len // 2, v_m = self.v_m, **kwargs.get("beamformer_settings", None))
 
         self.sphere_size = kwargs.get("sphere_size", 1500)
         self.sphere_factor = kwargs.get("sphere_factor", 1.1) # how much more than the semisphere
@@ -78,6 +81,9 @@ class KalmanTracker(Tracker):
         self.c_lon = 8.8189
         self.c_lat = 47.22321
 
+
+        self.save_tracks = kwargs.get("save_tracks", False)
+        self.tracker_count = 0
         self.objects = []
         self.colors = [
             "#fc3fc4",
@@ -202,9 +208,10 @@ class KalmanTracker(Tracker):
                 kalman = self._create_kalman_object(peak)
                 self.objects.append(
                     Kalman_track_object(
-                        peak.reshape((-1, 2)), kalman, self.colors.pop()
+                        peak.reshape((-1, 2)), kalman, self.colors.pop(), fname=f'./out/{self.datetime_str}_{self.tracker_count}.txt'
                     )
                 )
+                self.tracker_count += 1
             return
 
         objects = []
@@ -235,9 +242,11 @@ class KalmanTracker(Tracker):
                     kalman = self._create_kalman_object(peak_pos)
                     objects.append(
                         Kalman_track_object(
-                            peak_pos.reshape((-1, 2)), kalman, self.colors.pop()
+                            peak_pos.reshape((-1, 2)), kalman, self.colors.pop(), fname=f'./out/{self.datetime_str}_{self.tracker_count}.txt'
+
                         )
                     )
+                    self.tracker_count += 1
 
                     # if track ran too long on kalman without peak update, discard it
                     if tracking_object.n_predictions >= self.max_blind_predict:
@@ -261,9 +270,11 @@ class KalmanTracker(Tracker):
             kalman = self._create_kalman_object(peak_pos)
             objects.append(
                 Kalman_track_object(
-                    peak_pos.reshape((-1, 2)), kalman, self.colors.pop()
+                    peak_pos.reshape((-1, 2)), kalman, self.colors.pop(), fname=f'./out/{self.datetime_str}_{self.tracker_count}.txt'
+
                 )
             )
+            self.tracker_count += 1
 
         self.objects = objects
 
@@ -280,6 +291,16 @@ class KalmanTracker(Tracker):
             block_str.append(f'({track_phi:.5f}, {track_theta:.5f})')
         with open(self.out_file, 'a') as f:
             f.write(';'.join(block_str) + "\n")
+
+    def write_trackers(self):
+        for tracker in self.objects:
+            if tracker.fname and tracker.track.shape[0] > 20:
+                track_rad = np.zeros_like(tracker.track)
+                with open(tracker.fname, 'w') as f:
+                    f.write(np.array2string(np.arctan2(tracker.track[:,1], tracker.track[:,0])))
+                    f.write("\n")
+                    f.write(np.array2string(np.sqrt(tracker.track[:,0]**2 + tracker.track[:,1]**2)))
+
 
 
     def track(self, block, compass_angle=0):
@@ -299,12 +320,14 @@ class KalmanTracker(Tracker):
             fill_value=0.5,
         ).T
         grid_cv = (grid/ np.max(grid) * 255).astype(np.uint8)
-        peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
-        peaks = arg_max_detector2(grid_cv)
+#         peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
+        peaks = arg_max_detector2(grid, min_height=10)
         peaks = self.do_compass_correction(compass_angle, peaks)
 #         peaks = self.do_compass_correction(0, peaks)
         self.save_peaks(peaks)
         self._update_trackers(peaks)
+        if self.save_tracks:
+            self.write_trackers()
         # For debugging Purposes
         #         grid = (grid * 255).astype(np.uint8)
         #         cv.imwrite(f'./tmp/im{self.i}.png', grid)

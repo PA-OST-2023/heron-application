@@ -36,7 +36,9 @@ class Application:
                 "sphere_factor": 1.1,
                 "max_blinf_predict": 10,
                 "angle_thresh": 2,
-                "alpha_gnss": 0.9}
+                "alpha_gnss": 0.9,
+                "save_tracks": True,
+                "v_m": 332}
         tracker_settings['beamformer_settings'] = beamformer_settings
         tracker_settings['peak_det_settings'] = peak_detector_settings
         json_port = 6667

@@ -18,7 +18,7 @@ from beamforming.kalman import KalmanFilter2D
 
 from utils.mic_array import make_fancy_circ_array, calculate_umbrella_array
 from utils.sphere import create_sphere
-from utils.peakDetection import arg_max_detector, peak_detector2
+from utils.peakDetection import arg_max_detector, peak_detector2, arg_max_detector2
 
 
 @dataclass
@@ -300,6 +300,7 @@ class KalmanTracker(Tracker):
         ).T
         grid_cv = (grid/ np.max(grid) * 255).astype(np.uint8)
         peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
+        peaks = arg_max_detector2(grid_cv)
         peaks = self.do_compass_correction(compass_angle, peaks)
 #         peaks = self.do_compass_correction(0, peaks)
         self.save_peaks(peaks)

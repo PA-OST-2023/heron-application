@@ -108,6 +108,13 @@ def peak_detector2(im, val_array=None, area_mask=None,sphere_factor=1.1, min_hei
 def arg_max_detector(x):
     return [np.unravel_index(np.argmax(x), x.shape)]
 
+def arg_max_detector2(x):
+    conversion_factor = np.pi/2 * 1.1 / 79.5
+    max_value = np.unravel_index(np.argmax(x), x.shape)
+    peak_cart = max_value - np.array([79.5, 79.5])
+    peak_norm = peak_cart * conversion_factor
+    peak_t = np.array([peak_norm[1], peak_norm[0]])
+    return [peak_t]
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

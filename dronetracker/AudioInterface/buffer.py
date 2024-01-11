@@ -2,6 +2,7 @@ import numpy as np
 import wave
 from time import sleep
 import threading
+from datetime import datetime
 
 
 class RingBuffer:
@@ -46,7 +47,11 @@ class RingBuffer:
             self._readCondition.notify_all()
 
             if self._write_to_wav:
-                self._wavfile.writeframes(item.tobytes())
+                try:
+                    self._wavfile.writeframes(item.tobytes())
+                except ValueEror:
+                    print("Wav already closed")
+
 
     #             print(self.get_available())
     #             print(f'{self.head = }')

@@ -38,6 +38,8 @@ class Communication:
                         data = self.send_http_request(s, "/", "GET")         # Send GET request and print response
                         json_data = data.split('\r\n\r\n')[-1]
                         self.data = json.loads(json_data)
+                        with open("./out/data.json", "w") as f:
+                            f.write(json_data)
                         if(self.outgoingCommands):
                             outDict = {}
                             for command in self.outgoingCommands:

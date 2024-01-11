@@ -40,7 +40,7 @@ class Application:
         tracker_settings['beamformer_settings'] = beamformer_settings
         tracker_settings['peak_det_settings'] = peak_detector_settings
         json_port = 6667
-        self.ui = UI(streamer_settings, tracker_settings, json_port)
+        self.ui = UI(streamer_settings, tracker_settings, json_port=json_port, use_compass=False)
 
     def _init_tracker(self):
         pass

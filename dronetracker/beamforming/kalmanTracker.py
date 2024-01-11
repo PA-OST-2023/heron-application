@@ -7,6 +7,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.interpolate import griddata
 import cv2 as cv
 from math import radians
+from datetime import datetime
 
 import sys
 
@@ -34,6 +35,11 @@ class KalmanTracker(Tracker):
 
     def __init__(self, config_file=None, **kwargs):
         print("Init Tracker")
+        current_datetime = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+        datetime_str = str(current_datetime)
+        self.out_file = f'./out/{datetime_str}.csv'
+        with open(self.out_file, 'w') as f:
+            pass
 
         self.angle = None
         self.n_mics = None
@@ -266,6 +272,16 @@ class KalmanTracker(Tracker):
         R = np.array([[cos(angle), -sin(angle)], [sin(angle), cos(angle)]])
         return [R @ peak for peak in peaks]
 
+    def save_peaks(self, peaks):
+        block_str = []
+        for peak in peaks:
+            track_phi = np.arctan2(peak[1],peak[0])
+            track_theta = np.sqrt(peak[0]**2 + peak[1]**2)
+            block_str.append(f'({track_phi:.5f}, {track_theta:.5f})')
+        with open(self.out_file, 'a') as f:
+            f.write(';'.join(block_str) + "\n")
+
+
     def track(self, block, compass_angle=0):
         print("<><><><><><Tracker><><><><><><><><")
         block = block[:, self.mic_order]
@@ -284,11 +300,9 @@ class KalmanTracker(Tracker):
         ).T
         grid_cv = (grid/ np.max(grid) * 255).astype(np.uint8)
         peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
-        print(peaks)
-        print(compass_angle)
         peaks = self.do_compass_correction(compass_angle, peaks)
 #         peaks = self.do_compass_correction(0, peaks)
-
+        self.save_peaks(peaks)
         self._update_trackers(peaks)
         # For debugging Purposes
         #         grid = (grid * 255).astype(np.uint8)

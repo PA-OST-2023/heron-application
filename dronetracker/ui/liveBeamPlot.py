@@ -9,6 +9,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 from math import degrees, radians
 from pathlib import Path
+from datetime import datetime
 
 from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
@@ -22,8 +23,9 @@ from ui.layout import make_layout
 from utils.communication import Communication
 
 class UI:
-    def __init__(self, streamer_settings, tracker_settings, json_port=6667):
+    def __init__(self, streamer_settings, tracker_settings, json_port=6667, use_compass=False):
         self.block_len = tracker_settings.get("block_len", 2048)
+        self.use_compass = use_compass
 
         self.streamer_settings = streamer_settings
         self.tracker_settings = tracker_settings
@@ -109,6 +111,7 @@ class UI:
         content.append(html.P(f'Air Pressure: {data["sensor_pressure"]:.2f}'))
         content.append(html.P(f'GNSS Satelites: {data["gnss_satelite_count"]:.2f}'))
         content.append(html.P(f'Streaming Speed: {data["streaming_speed"]:.2f}'))
+        content.append(html.P(f'Used Array Angle: {self.tracker.angle:.2f}'))
         return content
 
     def run(self):
@@ -332,7 +335,11 @@ class UI:
                 self.is_recording = False
                 return ("Start Recording")
             elif self.streamer is not None:
-                self.streamer.start_recording('./out.wav')
+
+                current_datetime = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+                datetime_str = str(current_datetime)
+                out_file = f'./out/{datetime_str}.wav'
+                self.streamer.start_recording(out_file)
                 self.is_recording = True
                 return ("Stop Recording")
             return ("Start Recording")
@@ -359,7 +366,7 @@ class UI:
                 ],
             )
             info_div = html.Div()
-            fig.update_layout(width=700, height=800, uirevision=1)
+            fig.update_layout(width=700, height=800, uirevision='constant')
             if self.tracker is None or self.streamer is None:
                 return fig, self.map_fig, html.Div([html.P()])
 
@@ -379,7 +386,10 @@ class UI:
                 if data["gnss_fix"]:
                     self.tracker.update_pos(data["gnss_latitude"], data["gnss_longitude"])
 
-                compass_angle = -1 * radians(data["sensor_heading"])
+                if self.use_compass:
+                    compass_angle = -1 * radians(data["sensor_heading"])
+                else:
+                    compass_angle = 0
                 info_div = self.generate_info(data)
             else:
                 angle = 0
@@ -475,7 +485,7 @@ class UI:
             fig.update_yaxes(range=[-1.7, 1.7], row=1, col=1)
             fig.update_xaxes(range=[-1.7, 1.7], row=1, col=1)
             fig.update_scenes(zaxis_range=[0, 1.1], row=1, col=1)
-            fig.update_layout(width=700, height=800, uirevision=1)
+            fig.update_layout(width=700, height=800, uirevision='constant')
 #             fig.update_yaxes(
 #                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
 #             )

@@ -452,7 +452,7 @@ class UI:
                 r = 30
                 x_map = r * np.sin(track_theta) * np.cos(track_phi)
                 y_map = r * np.sin(track_theta) * np.sin(track_phi)
-                lat_map, lon_map = convert_to_map(c_lon, c_lat, x_map, y_map)
+                lat_map, lon_map = convert_to_map(self.tracker.c_lon, self.tracker.c_lat, x_map, y_map)
                 self.map_fig.add_trace(
                     go.Scattermapbox(
                         mode="markers+lines",
@@ -471,6 +471,7 @@ class UI:
                     marker={"color": "rgb(255, 0, 0)", "size": 5.5},
                 )
             )
+            self._update_map_center(self.tracker.c_lon, self.tracker.c_lat)
 
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
             #             fig.update_layout(uirevision=1)

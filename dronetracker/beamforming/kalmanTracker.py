@@ -139,8 +139,8 @@ class KalmanTracker(Tracker):
         return (np.abs(angle - self.angle) > self.angle_thresh)
 
     def update_pos(self, lat, lon):
-        self.lat = self.lat * self.alpha_gnss + lat *(1-self.alpha_gnss)
-        self.lon = self.lon * self.alpha_gnss + lon *(1-self.alpha_gnss)
+        self.c_lat = self.c_lat * self.alpha_gnss + lat *(1-self.alpha_gnss)
+        self.c_lon = self.c_lon * self.alpha_gnss + lon *(1-self.alpha_gnss)
 
     def init_config_array(self, config_file):
         with open(config_file, "rb") as f:

@@ -154,19 +154,25 @@ class KalmanTracker(Tracker):
         self.n_mics = config["n_mic"]
         self.mic_order = config["mic_order"]
         arr_param = config.get("arr_param", None)
-        self.phi_m, self.r_m, self.coords = make_fancy_circ_array(
-            self.n_mics, **arr_param
-        )
+        if config.get("arr_type") == "umbrella":
 
-        self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
+            self.coords = calculate_umbrella_array(radians(arr_param["gamma"]), 0.01185 - 0.0016).T
+            self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
+        else:
+            self.phi_m, self.r_m, self.coords = make_fancy_circ_array(
+                self.n_mics, **arr_param
+            )
+
+            self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
     def get_sphere(self):
         return self.phi[: self.sphere_size], self.theta[: self.sphere_size]
+#         return self.phi[: ], self.theta[: ]
 
     def make_peak_detector_mask(self):
-        grid_x, grid_y = np.mgrid[-1.6:1.6:160j, -1.6:1.6:160j]
+        grid_x, grid_y = np.mgrid[-1.8:1.8:191j, -1.8:1.8:191j]
         mask = np.zeros_like(self.x_projection)
-        mask[: self.sphere_size] = 1
+        mask[: int(self.sphere_size * np.mean([1, self.sphere_factor]))] = 1
         grid = griddata(
             (self.x_projection, self.y_projection),
             mask,
@@ -311,7 +317,7 @@ class KalmanTracker(Tracker):
         max_peak = arg_max_detector(response)
         max_val = response[max_peak[0]]
 
-        grid_x, grid_y = np.mgrid[-1.6:1.6:160j, -1.6:1.6:160j]
+        grid_x, grid_y = np.mgrid[-1.8:1.8:191j, -1.8:1.8:191j]
         grid = griddata(
             (self.x_projection, self.y_projection),
             response,
@@ -320,8 +326,8 @@ class KalmanTracker(Tracker):
             fill_value=0.5,
         ).T
         grid_cv = (grid/ np.max(grid) * 255).astype(np.uint8)
-#         peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
-        peaks = arg_max_detector2(grid, min_height=10)
+        peaks= peak_detector2(grid_cv, val_array=grid, area_mask=self.peak_detector_mask, sphere_factor=self.sphere_factor, **self.peak_det_settings)
+#         peaks = arg_max_detector2(grid, min_height=10)
         peaks = self.do_compass_correction(compass_angle, peaks)
 #         peaks = self.do_compass_correction(0, peaks)
         self.save_peaks(peaks)
@@ -338,3 +344,4 @@ class KalmanTracker(Tracker):
 #         response = response /  # max Value
         print("<><><><><><Tracker Done><><><><><>")
         return response[: self.sphere_size], peaks, self.objects, max_val, None
+#         return response[: ], peaks, self.objects, max_val, None

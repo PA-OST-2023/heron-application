@@ -54,6 +54,7 @@ class UI:
         self.tracker = None
         self.streamer = None
         self.angle = None
+        self.track_len = 15
 
 
         self.x_hat = []
@@ -150,7 +151,7 @@ class UI:
                     {"display": "block"},
                     "text",
                     "./data/random.wav",
-                    str(Path(__file__).parent.parent / "configs" / "testfancy1.toml"),
+                    str(Path(__file__).parent.parent / "configs" / "umbrella0.toml"),
                 )
 
             return "", "", {"display": "none"}, "number", "", ""
@@ -445,10 +446,26 @@ class UI:
             c_lon = 8.8189
             c_lat = 47.22321
 
+            t_tmp = np.linspace(0, 2*np.pi, 50)
+            x_circ = 31 * np.cos(t_tmp)
+            y_circ = 31 * np.sin(t_tmp)
+            lat_map, lon_map = convert_to_map(self.tracker.c_lon, self.tracker.c_lat, x_circ, y_circ)
+            self.map_fig.add_trace(
+                go.Scattermapbox(
+                    mode="markers+lines",
+                    lon=lon_map,
+                    lat=lat_map,
+                    line={"color": "#FF0000", "width": 0.5},
+                    marker={"color": "#FF0000", "size": 0.2},
+                )
+            )
+
             positions_div_content = []
             for tracking_object in tracking_objects:
-                x_data = tracking_object.track[:, 0]
-                y_data = tracking_object.track[:, 1]
+                if tracking_object.track.shape[0] < 5 or (tracking_object.track.shape[0] < 11 and tracking_object.n_predictions > 3):
+                    continue
+                x_data = tracking_object.track[-self.track_len:, 0]
+                y_data = tracking_object.track[-self.track_len:, 1]
                 color = tracking_object.color
                 track_phi = np.arctan2(y_data, x_data)
                 track_theta = np.sqrt(y_data**2 + x_data**2)
@@ -465,8 +482,16 @@ class UI:
                         mode="markers+lines",
                         lon=lon_map,
                         lat=lat_map,
-                        line={"color": color, "width": 3},
-                        marker={"color": color, "size": 3.5},
+                        line={"color": color, "width": 2.5},
+                        marker={"color": color, "size": 1.5},
+                    )
+                )
+                self.map_fig.add_trace(
+                    go.Scattermapbox(
+                        mode="markers",
+                        lon=[lon_map[-1]],
+                        lat=[lat_map[-1]],
+                        marker={"color": color, "size": 9.5},
                     )
                 )
 
@@ -493,8 +518,8 @@ class UI:
                 center=dict(x=0, y=0, z=0),
                 eye=dict(x=0, y=0, z=2)
             )
-            fig.update_yaxes(range=[-1.7, 1.7], row=1, col=1)
-            fig.update_xaxes(range=[-1.7, 1.7], row=1, col=1)
+            fig.update_yaxes(range=[-2.7, 2.7], row=1, col=1)
+            fig.update_xaxes(range=[-2.7, 2.7], row=1, col=1)
             fig.update_scenes(zaxis_range=[0, 1.1], row=1, col=1)
             fig.update_layout(width=700, height=800, uirevision='constant')
 #             fig.update_yaxes(
@@ -506,6 +531,7 @@ class UI:
             fig.layout.scene2.camera =camera2
             fig.layout.scene1.camera =camera1
             fig.update_layout(showlegend=False)
+            self.map_fig.update_layout(showlegend=False)
 
             return fig, self.map_fig, html.Div(info_div, style={"border-top": "solid black", "border-bottom": "solid black"}), html.Div(positions_div_content)
 

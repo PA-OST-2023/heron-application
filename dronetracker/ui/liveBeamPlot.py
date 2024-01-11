@@ -350,6 +350,7 @@ class UI:
                 Output(component_id="live-beam-plots", component_property="figure"),
                 Output(component_id="live-update-graph", component_property="figure"),
                 Output("div-info", "children"),
+                Output("pos-div", "children"),
             ],
             Input("beam-plots", "n_intervals"),
         )
@@ -368,7 +369,7 @@ class UI:
             info_div = html.Div()
             fig.update_layout(width=700, height=800, uirevision='constant')
             if self.tracker is None or self.streamer is None:
-                return fig, self.map_fig, html.Div([html.P()])
+                return fig, self.map_fig, html.Div([html.P()]), html.Div([html.P()])
 
             if self.communicator is not None:
                 self.communicator.getData()
@@ -404,7 +405,7 @@ class UI:
                 del self.tracker
                 self.tracker = None
                 self.streamer = None
-                return fig, self.map_fig, html.Div(info_div)
+                return fig, self.map_fig, html.Div(info_div), html.Div(id='none')
             response, meas, tracking_objects, max_val, *_ = self.tracker.track(block, compass_angle)
             self.max_vals.append(max_val)
 #             r = response
@@ -439,13 +440,15 @@ class UI:
             c_lon = 8.8189
             c_lat = 47.22321
 
+            positions_div_content = []
             for tracking_object in tracking_objects:
                 x_data = tracking_object.track[:, 0]
                 y_data = tracking_object.track[:, 1]
                 color = tracking_object.color
                 track_phi = np.arctan2(y_data, x_data)
                 track_theta = np.sqrt(y_data**2 + x_data**2)
-
+                positions_div_content.append(html.P(f'Phi:   {degrees(track_phi[-1]):.2f}', style={"color": color}))
+                positions_div_content.append(html.P(f'Theta: {degrees(track_theta[-1]):.2f}', style={"color": color}))
                 r = 30
                 x_map = r * np.sin(track_theta) * np.cos(track_phi)
                 y_map = r * np.sin(track_theta) * np.sin(track_phi)
@@ -496,7 +499,7 @@ class UI:
             fig.layout.scene1.camera =camera1
             fig.update_layout(showlegend=False)
 
-            return fig, self.map_fig, html.Div(info_div, style={"border-top": "solid black", "border-bottom": "solid black"})
+            return fig, self.map_fig, html.Div(info_div, style={"border-top": "solid black", "border-bottom": "solid black"}), html.Div(positions_div_content)
 
 
 if __name__ == "__main__":

@@ -56,6 +56,7 @@ def make_layout(map_fig):
                     [
                         html.H3("Map"),
                         dcc.Graph(figure=map_fig, id="live-update-graph"),
+                        html.Div([], id='pos-div')
                     ],
                     className="four columns",
                 ),

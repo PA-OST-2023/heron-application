@@ -39,7 +39,8 @@ class UI:
             height=900,
             margin=go.layout.Margin(l=50, r=50, b=100, t=100, pad=4),
         )
-        external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+#         external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+#         external_stylesheets = ["./dronetracker/ui/style.css"]
         self.map_fig = None
         if is_online:
             self._setup_map()
@@ -50,7 +51,8 @@ class UI:
 
         self.is_online = is_online
 
-        self.app = Dash(__name__, external_stylesheets=external_stylesheets)
+#         self.app = Dash(__name__, external_stylesheets=external_stylesheets)
+        self.app = Dash(__name__)
         self.app.layout = make_layout(self.map_fig)
         self.setup_callbacks()
 
@@ -107,7 +109,6 @@ class UI:
     def _update_map_center(self, center_lon, center_lat):
         self.map_fig.update_layout(
             mapbox_style="open-street-map",
-            mapbox_zoom=18,
             mapbox_center_lat=center_lat,
             mapbox_center_lon=center_lon,
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
@@ -569,6 +570,7 @@ class UI:
             fig.update_scenes(zaxis_range=[0, 1.1], row=1, col=1)
 
             fig.update_layout(width=700, height=800, uirevision='constant')
+#             self.map_fig.update_layout(uirevision='constant')
             fig.layout.scene2.camera =camera2
             fig.layout.scene1.camera =camera1
             fig.update_layout(showlegend=False)

@@ -23,7 +23,7 @@ from ui.layout import make_layout
 from utils.communication import Communication
 
 class UI:
-    def __init__(self, streamer_settings, tracker_settings, json_port=6667, use_compass=False):
+    def __init__(self, streamer_settings, tracker_settings, json_port=6667, use_compass=False, is_online=False):
         self.block_len = tracker_settings.get("block_len", 2048)
         self.use_compass = use_compass
 
@@ -41,7 +41,14 @@ class UI:
         )
         external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
         self.map_fig = None
-        self._setup_map()
+        if is_online:
+            self._setup_map()
+        else:
+            self.map_fig = go.Figure(go.Scatter())
+            self.map_fig.update_layout(
+                margin={"r": 0, "t": 0, "l": 0, "b": 0},uirevision="constant", showlegend=False)
+
+        self.is_online = is_online
 
         self.app = Dash(__name__, external_stylesheets=external_stylesheets)
         self.app.layout = make_layout(self.map_fig)
@@ -449,16 +456,45 @@ class UI:
             t_tmp = np.linspace(0, 2*np.pi, 50)
             x_circ = 31 * np.cos(t_tmp)
             y_circ = 31 * np.sin(t_tmp)
-            lat_map, lon_map = convert_to_map(self.tracker.c_lon, self.tracker.c_lat, x_circ, y_circ)
-            self.map_fig.add_trace(
-                go.Scattermapbox(
-                    mode="markers+lines",
-                    lon=lon_map,
-                    lat=lat_map,
-                    line={"color": "#FF0000", "width": 0.5},
-                    marker={"color": "#FF0000", "size": 0.2},
+            if self.is_online:
+                lat_map, lon_map = convert_to_map(self.tracker.c_lon, self.tracker.c_lat, x_circ, y_circ)
+                self.map_fig.add_trace(
+                    go.Scattermapbox(
+                        mode="markers+lines",
+                        lon=lon_map,
+                        lat=lat_map,
+                        line={"color": "#FF0000", "width": 0.5},
+                        marker={"color": "#FF0000", "size": 0.2},
+                    )
                 )
-            )
+                self.map_fig.add_trace(
+                    go.Scattermapbox(
+                        mode="markers",
+                        lon=[self.tracker.c_lon],
+                        lat=[self.tracker.c_lat],
+                        marker={"color": "rgb(255, 0, 0)", "size": 5.5},
+                    )
+                )
+                self._update_map_center(self.tracker.c_lon, self.tracker.c_lat)
+            else:
+                self.map_fig.add_trace(
+                    go.Scatter(
+                        mode="markers+lines",
+                        y=y_circ,
+                        x=x_circ,
+                        line={"color": "#FF0000", "width": 0.5},
+                        marker={"color": "#FF0000", "size": 0.2},
+                    )
+                )
+                self.map_fig.add_trace(
+                    go.Scatter(
+                        mode="markers",
+                        x=[0],
+                        y=[0],
+                        marker={"color": "rgb(255, 0, 0)", "size": 5.5},
+                    )
+                )
+
 
             positions_div_content = []
             for tracking_object in tracking_objects:
@@ -476,34 +512,44 @@ class UI:
                 r = 30
                 x_map = r * np.sin(track_theta) * np.cos(track_phi)
                 y_map = r * np.sin(track_theta) * np.sin(track_phi)
-                lat_map, lon_map = convert_to_map(self.tracker.c_lon, self.tracker.c_lat, x_map, y_map)
+                if self.is_online:
+                    lat_map, lon_map = convert_to_map(self.tracker.c_lon, self.tracker.c_lat, x_map, y_map)
+                    self.map_fig.add_trace(
+                        go.Scattermapbox(
+                            mode="markers+lines",
+                            lon=lon_map,
+                            lat=lat_map,
+                            line={"color": color, "width": 2.5},
+                            marker={"color": color, "size": 1.5},
+                        )
+                    )
+                    self.map_fig.add_trace(
+                        go.Scattermapbox(
+                            mode="markers",
+                            lon=[lon_map[-1]],
+                            lat=[lat_map[-1]],
+                            marker={"color": color, "size": 9.5},
+                        )
+                    )
+                    continue
                 self.map_fig.add_trace(
-                    go.Scattermapbox(
+                    go.Scatter(
                         mode="markers+lines",
-                        lon=lon_map,
-                        lat=lat_map,
+                        x=x_map,
+                        y=y_map,
                         line={"color": color, "width": 2.5},
                         marker={"color": color, "size": 1.5},
                     )
                 )
                 self.map_fig.add_trace(
-                    go.Scattermapbox(
+                    go.Scatter(
                         mode="markers",
-                        lon=[lon_map[-1]],
-                        lat=[lat_map[-1]],
+                        y=[y_map[-1]],
+                        x=[x_map[-1]],
                         marker={"color": color, "size": 9.5},
                     )
                 )
 
-            self.map_fig.add_trace(
-                go.Scattermapbox(
-                    mode="markers",
-                    lon=[self.tracker.c_lon],
-                    lat=[self.tracker.c_lat],
-                    marker={"color": "rgb(255, 0, 0)", "size": 5.5},
-                )
-            )
-            self._update_map_center(self.tracker.c_lon, self.tracker.c_lat)
 
             # fig.add_trace(go.Heatmap(z=(grid)), row=2, col=2)
             #             fig.update_layout(uirevision=1)
@@ -521,17 +567,14 @@ class UI:
             fig.update_yaxes(range=[-2.7, 2.7], row=1, col=1)
             fig.update_xaxes(range=[-2.7, 2.7], row=1, col=1)
             fig.update_scenes(zaxis_range=[0, 1.1], row=1, col=1)
+
             fig.update_layout(width=700, height=800, uirevision='constant')
-#             fig.update_yaxes(
-#                 range=[-1.7, 1.7], scaleanchor="x", scaleratio=1, row=2, col=1
-#             )
-#             fig.update_xaxes(range=[-1.7, 1.7], row=2, col=1)
-#             fig.update_yaxes(range=[0, 90], row=2, col=2)
-#             fig.update_xaxes(range=[-180, 180], row=2, col=2)
             fig.layout.scene2.camera =camera2
             fig.layout.scene1.camera =camera1
             fig.update_layout(showlegend=False)
-            self.map_fig.update_layout(showlegend=False)
+            self.map_fig.update_yaxes(
+                range=[-35, 35], scaleanchor="x", scaleratio=1)
+#             self.map_fig.update_layout(showlegend=False)
 
             return fig, self.map_fig, html.Div(info_div, style={"border-top": "solid black", "border-bottom": "solid black"}), html.Div(positions_div_content)
 

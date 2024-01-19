@@ -193,9 +193,9 @@ class KalmanTracker(Tracker):
 
     def _create_kalman_object(self, pos_0):
         Ts = 0.01
-        Qv = 500
-        Q_pos = 200
-        Q_vel = 100
+        Qv = 200 # 500
+        Q_pos = 300 # 200
+        Q_vel = 600 # 300
         return KalmanFilter2D(Ts, Qv, Q_pos, Q_vel, pos_0[0], pos_0[1])
 
     def _make_blind_prediciton(self, tracking_object):

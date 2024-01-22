@@ -23,7 +23,7 @@ from ui.layout import make_layout
 from utils.communication import Communication
 
 class UI:
-    def __init__(self, streamer_settings, tracker_settings, json_port=6667, use_compass=False, is_online=False):
+    def __init__(self, streamer_settings, tracker_settings, tracker_len= 15, json_port=6667, use_compass=False, is_online=False):
         self.block_len = tracker_settings.get("block_len", 2048)
         self.use_compass = use_compass
 
@@ -63,7 +63,7 @@ class UI:
         self.tracker = None
         self.streamer = None
         self.angle = None
-        self.track_len = 15
+        self.track_len = tracker_len
 
 
         self.x_hat = []
@@ -433,7 +433,7 @@ class UI:
                     y=(self.y),
                     intensity=response,
                     colorscale="Viridis",
-                    showscale=False,
+                    showscale=True,
                     cmin=0,
                     cmax=1
                 ),
@@ -442,7 +442,7 @@ class UI:
             )
             fig.add_trace(
                 go.Mesh3d(
-                    z=self.z_sphere, x=self.x_sphere, y=self.y_sphere, intensity=response, colorscale="Viridis", showscale=False, cmin=0, cmax=1,
+                    z=self.z_sphere, x=self.x_sphere, y=self.y_sphere, intensity=response, colorscale="Viridis", showscale=True, cmin=0, cmax=1,
                 ),
                 row=2,
                 col=1,

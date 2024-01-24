@@ -6,7 +6,7 @@ setup ssh key for git
 ssh-keygen -o
 cat /<keyname>.pub
 
-fro vim
+for vim
 sudo apt-get install cmake cmake-qt-gui
 install youcompleteme
 

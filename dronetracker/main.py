@@ -32,18 +32,22 @@ class Application:
                         "rel_max": 0.2}
         streamer_settings = {}
         tracker_settings = {"block_len": self.block_len,
-                "sphere_size": 1700,
+#                "sphere_size": 1700,
+                "sphere_size": 2500,
                 "sphere_factor": 1.2,
                 "max_blinf_predict": 10,
                 "angle_thresh": 2,
                 "alpha_gnss": 0.9,
                 "save_tracks": True,
-                "v_m": 332}
+                "v_m": 332,
+                "c_lat": 47.2202,
+                "c_lon": 8.8402}
         tracker_settings['beamformer_settings'] = beamformer_settings
         tracker_settings['peak_det_settings'] = peak_detector_settings
         json_port = 6667
+        tracker_len=40
         self.ui = UI(streamer_settings, tracker_settings, json_port=json_port, use_compass=False,
-                is_online = True
+                is_online = True, tracker_len=tracker_len
                 )
 
     def _init_tracker(self):

@@ -20,7 +20,7 @@ class KalmanFilter2D:
         self.x = np.array([x_0, y_0, 0, 0], dtype=np.float32)
         pass
 
-    def run_filter(self, y, Qv=0):
+    def run_filter(self, y):
         x_n_n1 = self.A @ self.x
         P_n_n1 = self.A @ self.P @ self.A.T + self.Qw
         self.K = (

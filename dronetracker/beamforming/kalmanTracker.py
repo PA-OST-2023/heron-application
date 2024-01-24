@@ -78,8 +78,8 @@ class KalmanTracker(Tracker):
 
 
         self.alpha_gnss = kwargs.get("alpha_gnss", 0.9)
-        self.c_lon = 8.8189
-        self.c_lat = 47.22321
+        self.c_lon = kwargs.get("c_lon", 8.8189)
+        self.c_lat = kwargs.get("c_lat", 47.22321)
 
 
         self.save_tracks = kwargs.get("save_tracks", False)
@@ -193,9 +193,9 @@ class KalmanTracker(Tracker):
 
     def _create_kalman_object(self, pos_0):
         Ts = 0.01
-        Qv = 500
-        Q_pos = 200
-        Q_vel = 100
+        Qv = 500 # 500
+        Q_pos = 200 # 200
+        Q_vel = 300 # 300
         return KalmanFilter2D(Ts, Qv, Q_pos, Q_vel, pos_0[0], pos_0[1])
 
     def _make_blind_prediciton(self, tracking_object):

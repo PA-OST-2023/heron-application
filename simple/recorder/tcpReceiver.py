@@ -30,7 +30,6 @@ class TcpReceiver:
         blockSampleCount = 128
         audioBlockSize = channelCount * blockSampleCount * 2
         packetSize = audioBlockSize + headerSize
-
         lastPacketIndex = -1
 
         while self._running:  # Keep trying to connect
@@ -40,12 +39,11 @@ class TcpReceiver:
                     s.connect((self.host, self.port))
                     s.sendall(b"0")
                     print(f"Connected to {self.host}:{self.port}")
-                    i = 0
                     lastReceived = time.time()
 
                     while self._running:  # Keep trying to receive data
                         try:
-                            data = s.recv(1460 * 8)
+                            data = s.recv(1460 * 1)
                             lastReceived = time.time()
                             if not data:
                                 continue
@@ -53,48 +51,22 @@ class TcpReceiver:
 
                             headerIndex = dataBuffer.find(magicStartSequence)
                             if headerIndex != -1 and len(dataBuffer) >= packetSize:
-                                packetIndex = int.from_bytes(
-                                    dataBuffer[headerIndex + 8 : headerIndex + 12],
-                                    "little",
-                                )
-                                timestamp = int.from_bytes(
-                                    dataBuffer[
-                                        headerIndex + 12 : headerIndex + headerSize
-                                    ],
-                                    "little",
-                                )
-                                audioData = dataBuffer[
-                                    headerIndex
-                                    + headerSize : headerIndex
-                                    + headerSize
-                                    + audioBlockSize
-                                ]
+                                packetIndex = int.from_bytes(dataBuffer[headerIndex + 8 : headerIndex + 12], "little")
+                                timestamp = int.from_bytes(dataBuffer[headerIndex + 12 : headerIndex + headerSize], "little")
+                                audioData = dataBuffer[headerIndex + headerSize : headerIndex + headerSize + audioBlockSize]
                                 dataBuffer = dataBuffer[headerIndex + packetSize :]
                                 if len(audioData) != audioBlockSize:
                                     continue
-                                decoded_data = np.frombuffer(
-                                    audioData, dtype=np.int16
-                                ).reshape(-1, 32)
+                                decoded_data = np.frombuffer(audioData, dtype=np.int16).reshape(-1, 32)
                                 self.buffer.append(decoded_data, decoded_data.shape[0])
 
                                 if lastPacketIndex == -1:
                                     lastPacketIndex = packetIndex - 1
                                 if packetIndex != lastPacketIndex + 1:
-                                    print(
-                                        f"Packet Drop Detected: {packetIndex}, Timestamp: {timestamp/10e9:.6f}"
-                                    )
+                                    print(f"Packet Drop Detected: {packetIndex}, Timestamp: {timestamp/10e9:.6f}")
                                 lastPacketIndex = packetIndex
 
-                                i += 1
-                                # if i % 100 == 0:
-                                #     print(
-                                #         f"Packet index: {packetIndex}, Timestamp: {timestamp/10e9:.6f}"
-                                #     )
-
-                        except (
-                            socket.timeout,
-                            TimeoutError,
-                        ) as e:  # Don't care about short connection drops, as long as the connection is re-established
+                        except (socket.timeout, TimeoutError) as e:  # Don't care about short connection drops, as long as the connection is re-established
                             if time.time() - lastReceived > self.tcp_conn_timeout:
                                 break
                             continue

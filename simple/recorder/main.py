@@ -20,6 +20,7 @@ class Recorder:
         wav_path = Path(__file__).parent / "out" / f"{file_name}.wav"
         self.streamer.start_recording(str(wav_path))
         print(f"Start Recording: {str(wav_path)}")
+        print("Press Ctrl+C to stop recording")
         try:
             while True:
                 time.sleep(0.1)

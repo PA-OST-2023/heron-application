@@ -24,6 +24,11 @@ class RingBuffer:
 
     def is_full(self):
         return self.size == self.capacity
+    
+    def clear(self):
+        self.size = 0
+        self.head = 0
+        self.tail = 0
 
     def append(self, item, size):
         with self._readCondition:
@@ -44,19 +49,25 @@ class RingBuffer:
     def get_all_available(self):
         return [self.data[(self.tail + i) % self.capacity] for i in range(self.size)]
 
-    def get_n(self, num):
+    def get_n_from_head(self, num):           # get n first samples from top
         with self._readCondition:
             if not self._readCondition.wait_for(
                 lambda: self.get_available() >= num, timeout=10
             ):
                 return None
-            #             start = self.head - num
             indices = np.arange(self.head - num, self.head, 1)
-            self.tail = self.head
-            self.size = 0
-            #             print('---------get------')
-            #             print(f'{self.tail = }')
-            #             return np.take(self._data, indices)
+            self.size = 0       # reset size since we discard all data behind tail
+            return self._data[indices, :].copy()
+        
+    def get_n(self, num):           # get n last samples in buffer
+        with self._readCondition:
+            if not self._readCondition.wait_for(
+                lambda: self.get_available() >= num, timeout=10
+            ):
+                return None
+            indices = np.arange(self.tail, self.tail + num, 1)
+            self.tail = (self.tail + num) & self.ringMask
+            self.size -= num
             return self._data[indices, :].copy()
 
     def get_capacity(self):

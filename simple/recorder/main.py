@@ -25,9 +25,10 @@ class Recorder:
             while True:
                 time.sleep(0.1)
         except KeyboardInterrupt:
+            pass
+        finally:
             with open(Path(__file__).parent / "out" / f"{file_name}.json", "w") as f:
                 json.dump(self.comm.getData(), f)
-            
             self.comm.stop()
             self.streamer.stop_recording()
             self.streamer.end_stream()

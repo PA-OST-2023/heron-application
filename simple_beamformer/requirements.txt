@@ -1,0 +1,9 @@
+black
+ipdb
+matplotlib
+numpy
+open3d
+scikit-learn
+scipy
+tomli
+opencv-python

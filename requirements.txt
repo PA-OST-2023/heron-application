@@ -10,3 +10,4 @@ PyAudio
 scikit-learn
 scipy
 tomli
+opencv-python

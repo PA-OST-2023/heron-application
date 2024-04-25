@@ -131,7 +131,7 @@ class KalmanTracker(Tracker):
         self.n_mics = 32
         self.angle = angle
         self.mic_order = np.arange(self.n_mics)
-        self.coords = calculate_umbrella_array(radians(angle), 0.01185 - 0.0016).T
+        self.coords = calculate_umbrella_array(angle, 0.01185 - 0.0016).T
         self.beamformer.compute_angled_filterbank(self.coords.T, self.phi, self.theta)
 
     def update_umbrella_array(self, angle):

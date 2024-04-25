@@ -221,7 +221,7 @@ class UI:
 
                 self.tracker_settings["v_m"] = self.vm
                 self.tracker = KalmanTracker(**self.tracker_settings)
-                self.tracker.init_umbrella_array(radians(angle), lat=lat, lon=lon)
+                self.tracker.init_umbrella_array(angle, lat=lat, lon=lon)
                 self._update_plot_coordinates()
 
                 self.streamer = TcpStreamer(arr_info, port=arr_conf)

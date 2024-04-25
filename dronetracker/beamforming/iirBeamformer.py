@@ -41,7 +41,8 @@ class IirBeamFormer:
         )
 
         t_s = sin(pi / 2 - phi_m) * r_m * (1 / self._vm)
-        fb = np.zeros((*np.squeeze(t_s).shape, self._block_len), dtype=np.complex64)
+#         fb = np.zeros((*np.squeeze(t_s).shape, self._block_len), dtype=np.complex64)
+        fb = np.zeros((*t_s.shape[:-1], self._block_len), dtype=np.complex64)
         fb[:, :, self._f_low : self._f_high] = exp(
             -1j * 2 * pi * f[:, :, self._f_low : self._f_high] * (t_s)
         )
@@ -68,3 +69,14 @@ class IirBeamFormer:
 
     def listen_at(self, signals, direction):
         pass
+if __name__ == "__main__":
+    hans = IirBeamFormer(1024, 500, 2000, 4100)
+    coord = np.random.rand(32,3)
+    phi = np.random.rand(500)
+    theta = np.random.rand(500)
+
+    hans.compute_angled_filterbank(coord, np.array([2]), np.array([2]))
+    print("ERFOLG!!!!!!")
+    hans.compute_angled_filterbank(coord, 2,2)
+    print("ERFOLG!!!!!!")
+    pass

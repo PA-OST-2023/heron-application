@@ -83,28 +83,29 @@ def make_fancy_circ_array(n_mic, n_circ, shift, r_0, r_1, plot=False):
 if __name__ == "__main__":
     import csv
     from pathlib import Path
-    csv_path = Path(__file__).parent / 'gt' / 'FancyArray_TestGeometry.csv'
-#     with open("./gt/FancyArray_TestGeometry.csv", newline="") as csvfile:
-    with open(csv_path, newline="") as csvfile:
-        # Create a DictReader object which interprets the first row as column titles
-        csv_reader = csv.DictReader(csvfile)
-        angles = []
-        positions = []
-        for row in csv_reader:
-            angles.append(float(row["Angle"]))
-            pos_tmp = []
-            for i in range(4):
-                pos_tmp.append(
-                    np.array(
-                        [
-                            -float(row[f"Mic {i} Z"]),
-                            -float(row[f"Mic {i} X"]),
-                            float(row[f"Mic {i} Y"]),
-                        ]
-                    )
-                )
-            positions.append(np.array(pos_tmp))
-
+#     csv_path = Path(__file__).parent / 'gt' / 'FancyArray_TestGeometry.csv'
+# #     with open("./gt/FancyArray_TestGeometry.csv", newline="") as csvfile:
+#     with open(csv_path, newline="") as csvfile:
+#         # Create a DictReader object which interprets the first row as column titles
+#         csv_reader = csv.DictReader(csvfile)
+#         angles = []
+#         positions = []
+#         for row in csv_reader:
+#             angles.append(float(row["Angle"]))
+#             pos_tmp = []
+#             for i in range(4):
+#                 pos_tmp.append(
+#                     np.array(
+#                         [
+#                             -float(row[f"Mic {i} Z"]),
+#                             -float(row[f"Mic {i} X"]),
+#                             float(row[f"Mic {i} Y"]),
+#                         ]
+#                     )
+#                 )
+#             positions.append(np.array(pos_tmp))
+    mics = calculate_umbrella_array(0, 0.01185 - 0.0016)
+    print(mics.shape)
     for angle, position in zip(angles, positions):
         mics = calculate_umbrella_array(radians(angle), 0.01185 - 0.0016)
         #         mics = calculate_umbrella_array(radians(angle),0.01185)

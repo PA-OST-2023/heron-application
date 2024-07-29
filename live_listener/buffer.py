@@ -1,5 +1,4 @@
 import numpy as np
-import wave
 import threading
 
 class RingBuffer:
@@ -13,8 +12,6 @@ class RingBuffer:
         self._available = 0
         self._readCondition = threading.Condition()
         self._isReadReady = False
-        self._write_to_wav = False
-        self._wavfile = None
 
     def is_empty(self):
         return self.size == 0
@@ -39,12 +36,6 @@ class RingBuffer:
             self._data[self.head : self.head + size] = item
             self.head = (self.head + size) & self.ringMask
             self._readCondition.notify_all()
-
-            if self._write_to_wav:
-                try:
-                    self._wavfile.writeframes(item.tobytes())
-                except ValueError:
-                    print("Wav already closed")
 
     def get_all_available(self):
         return [self.data[(self.tail + i) % self.capacity] for i in range(self.size)]
@@ -76,17 +67,6 @@ class RingBuffer:
     def get_size(self):
         return self.size
 
-    def start_recording(self, fname):
-        self._wavfile = wave.open(fname, "wb")
-        self._wavfile.setframerate(44100)
-        self._wavfile.setnchannels(32)
-        self._wavfile.setsampwidth(2)
-        self._write_to_wav = True
-
-    def stop_recording(self):
-        self._write_to_wav = False
-        self._wavfile.close()
-
 
 if __name__ == "__main__":
     from time import sleep
@@ -116,19 +96,3 @@ if __name__ == "__main__":
     schribi.join()
     lesi.join()
     print("end")
-
-    # Create a ring buffer with capacity of 5
-#     buffer = RingBuffer(5)
-
-# Add elements to the buffer
-#     for i in range(7):
-#         buffer.append(i)
-
-# Get the elements currently stored in the buffer
-#     print("Elements in the buffer:", buffer.get())
-
-# Check buffer status
-#     print("Is buffer empty?", buffer.is_empty())
-#     print("Is buffer full?", buffer.is_full())
-#     print("Buffer capacity:", buffer.get_capacity())
-#     print("Buffer size:", buffer.get_size())

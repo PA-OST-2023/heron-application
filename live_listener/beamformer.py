@@ -5,10 +5,9 @@ from scipy.spatial.transform import Rotation as R
 
 
 class Beamformer:
-    def __init__(self, num_mics = 32, fs=44100, block_len=128):
+    def __init__(self, num_mics = 32, fs=44100):
         self._num_mics = num_mics
         self._arm_angle = 0.0
-        self._block_len = block_len
         self._fs = fs
         self.update_arm_angle(self._arm_angle)
         
@@ -54,7 +53,7 @@ class Beamformer:
     
 
 if __name__ == "__main__":
-    beamformer = Beamformer(32, 44100, 256)
+    beamformer = Beamformer(32, 44100)
 
     angle = 0.0     # degrees
     theta = 90.0     # degrees

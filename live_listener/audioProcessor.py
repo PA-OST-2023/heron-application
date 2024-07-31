@@ -7,6 +7,9 @@ import sounddevice as sd
 import numpy as np
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import convolve
+from numba import jit
+
+import matplotlib.pyplot as plt
 
 
 class AudioProcessor:
@@ -28,7 +31,9 @@ class AudioProcessor:
         self._last_block_fft = np.zeros(self._block_len, dtype=np.complex64)    # Mono output
 
         # Delay-Line Approach
-        self._delay_line = np.zeros((channels, block_len), dtype=np.float32)
+        self._delay_line_taps = 128
+        self._delay_line_offset = 20
+        self._delay_line = np.zeros((self._channels, self._delay_line_taps), dtype=np.float32)
 
         self.update_delays(self.beamformer.calculate_delays(0, 0))   # Initialize delays (dummy)
         
@@ -68,14 +73,12 @@ class AudioProcessor:
         self._delay_filter = np.exp(-1j * 2 * np.pi * f * self._delays)
 
         # Delay-Line Approach
-        self._delay_line_taps = 128
         n = np.arange(self._delay_line_taps)
-        h = np.sinc(n - delays * self._fs).astype(np.float64)      # Impulse response of the delay line
-        
-        # window = np.hamming(self._delay_line_taps)      # Windowing function to reduce side lobes
-        # h *= window
-        h /= np.sum(h)              # Normalize filter to ensure unity gain
+        h = np.sinc(n - (delays * self._fs) - self._delay_line_offset).astype(np.float32)      # Impulse response of the delay line
         self._delay_line_weights = h
+        for i in range(self._channels):
+            plt.plot(h[i], marker=".")
+        plt.show()
         
     
 
@@ -84,7 +87,7 @@ class AudioProcessor:
         data = self._buffer.get_n(frames)
         if data is None:
             return
-        data = data.astype(np.float32) / 32767.0            # Use float64 for processing
+        data = data.astype(np.float32) / 32767.0            # Use float32 for processing
         mono = self.process_beamformer_delay_line(data)
         self._recorder.append(mono)
 
@@ -98,13 +101,7 @@ class AudioProcessor:
 
 
     def process_beamformer_delay_line(self, input):
-        output = np.zeros(self._block_len, dtype=np.float32)
-        for i in range(self._block_len):
-            self._delay_line = np.roll(self._delay_line, 1, axis=1)     # Shift the delay line for one sample to the right (for each channel)
-            self._delay_line[:,0] = input[i]                            # Update the first row of the delay line with the input
-            product = self._delay_line * self._delay_line_weights       # Performe element wise multiplication for delay line and weights
-            output[i] = np.sum(product) / self._channels                # Sum the products across the channels
-        return output
+        return delay_line(self._delay_line, self._delay_line_weights, input)
 
 
     def process_beamformer_fft(self, input):
@@ -116,13 +113,20 @@ class AudioProcessor:
         return sum_overlapped.real
     
     
-
-
     def process_filter(self, input):        # Mono Low Pass Filter
         return input
     
     def process_compressor(self, input):    # Mono Compressor
         return input
+
+@jit
+def delay_line(delay_line_object, weights, input):
+    output = np.zeros(input.shape[0], dtype=np.float32)
+    for i in range(input.shape[0]):
+        delay_line_object[:, 1:] = delay_line_object[:, :-1]   # This is faster than np.roll
+        delay_line_object[:,0] = input[i]                            # Update the first row of the delay line with the input
+        output[i] = np.sum(delay_line_object * weights) / delay_line_object.shape[0]
+    return output
 
 
 

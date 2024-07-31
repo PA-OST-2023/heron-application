@@ -17,12 +17,12 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,20">
+   <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
     <property name="sizeConstraint">
      <enum>QLayout::SetMinimumSize</enum>
     </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
       <property name="spacing">
        <number>6</number>
       </property>
@@ -30,7 +30,7 @@
        <enum>QLayout::SetMinimumSize</enum>
       </property>
       <item>
-       <widget class="QGroupBox" name="groupBox_Storage">
+       <widget class="QGroupBox" name="groupBox_array">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -38,13 +38,13 @@
          </size>
         </property>
         <property name="title">
-         <string>Storage</string>
+         <string>Array</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_11"/>
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_Settings">
+       <widget class="QGroupBox" name="groupBox_controller">
         <property name="maximumSize">
          <size>
           <width>16777215</width>
@@ -52,7 +52,7 @@
          </size>
         </property>
         <property name="title">
-         <string>Settings</string>
+         <string>Controller</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <property name="sizeConstraint">
@@ -61,17 +61,47 @@
         </layout>
        </widget>
       </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_filter">
+        <property name="title">
+         <string>Band-Pass Filter</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <widget class="QSlider" name="horizontalSlider">
+           <property name="autoFillBackground">
+            <bool>false</bool>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="invertedControls">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_compressor">
+        <property name="title">
+         <string>Compressor</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_8"/>
+       </widget>
+      </item>
      </layout>
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0">
       <item>
-       <widget class="QGroupBox" name="groupBox_Media">
+       <widget class="QGroupBox" name="groupBox_beamformer">
         <property name="enabled">
          <bool>true</bool>
         </property>
         <property name="title">
-         <string>Media</string>
+         <string>Beamformer</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_9"/>
        </widget>

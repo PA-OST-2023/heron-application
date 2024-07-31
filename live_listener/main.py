@@ -42,9 +42,6 @@ class Main():
         self.com.stop()
 
     def run(self):
-        arm_angle = self.com.getData()["sensor_angle"]
-        self.proc.beamformer.update_arm_angle(arm_angle)
-
         self.proc.start_stream()
         try:
             while self.running:

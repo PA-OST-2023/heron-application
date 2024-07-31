@@ -17,6 +17,8 @@ class Main():
         self.com = Communication()
         self.proc = AudioProcessor(self.ip, 6666, self.mic_num, self.sample_rate, self.block_len)
 
+        self.controller_connected = False
+
         self.theta = 0
         self.phi = 0
         self.arm = 0
@@ -67,10 +69,14 @@ class Main():
         self.controller = XboxController()
         while self.running:
             stick = self.controller.read()
-            self.theta = np.sqrt(stick[0]**2 + stick[1]**2) * 90
-            self.phi = np.arctan2(stick[0], -stick[1]) * 180 / np.pi + 180
-            self.theta = np.clip(self.theta, 0, 90)
-            self.phi = np.clip(self.phi, 0, 360)
+            if stick != (-1, -1):
+                self.controller_connected = True
+                self.theta = np.sqrt(stick[0]**2 + stick[1]**2) * 90
+                self.phi = np.arctan2(stick[0], -stick[1]) * 180 / np.pi + 180
+                self.theta = np.clip(self.theta, 0, 90)
+                self.phi = np.clip(self.phi, 0, 360)
+            else:
+                self.controller_connected = False
             time.sleep(0.5)
         
 

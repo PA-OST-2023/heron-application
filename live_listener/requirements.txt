@@ -1,5 +1,5 @@
 numpy
 sounddevice
-scipy
-numba
+scipy  # Needs: sudo apt install gfortran
+# numba
 inputs

@@ -7,7 +7,7 @@ import sounddevice as sd
 import numpy as np
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import convolve, firwin, lfilter
-from numba import jit
+# from numba import jit
 import time
 
 
@@ -156,7 +156,7 @@ class AudioProcessor:
         return output
 
 
-@jit
+# @jit
 def delay_line(delay_line_object, weights, input):
     output = np.zeros(input.shape[0], dtype=np.float32)
     for i in range(input.shape[0]):

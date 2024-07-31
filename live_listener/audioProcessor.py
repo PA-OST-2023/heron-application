@@ -26,6 +26,9 @@ class AudioProcessor:
         self.stream = sd.OutputStream(samplerate=self._fs, channels=1, callback=self.callback, blocksize=self._block_len, dtype=np.int16)
         self.beamformer = Beamformer(self._channels, self._fs)
 
+        self._max_buffer_size = 25000
+        self._initial_buffer_clear = True
+
         # FFT Approach
         self._block_len_fft = self._block_len * 2
         self._last_block_fft = np.zeros(self._block_len, dtype=np.complex64)    # Mono output
@@ -84,20 +87,26 @@ class AudioProcessor:
     
     # Internal functions
     def callback(self, outdata, frames, time, status):
+        if self._initial_buffer_clear:
+            self._buffer.clear()
+            self._initial_buffer_clear = False
+            print("Initial buffer cleared")
+        
         data = self._buffer.get_n(frames)
         if data is None:
-            return
+            np.zeros((frames, 1), dtype=np.int16)
+        
         data = data.astype(np.float32) / 32767.0            # Use float32 for processing
         mono = self.process_beamformer_delay_line(data)
         self._recorder.append(mono)
 
         mono = self.process_filter(mono, 1500, 3000)
-        mono = self.process_compressor(mono, -40, 0, 30)
+        mono = self.process_compressor(mono, -10, 8, 40)
 
         outdata[:] = (mono * 32767.0).astype(np.int16).reshape(-1, 1)      # Convert back to int16 for output
-        if(self._buffer.get_size() > 5000):
-            print("Buffer has been cleared to reduce latency")
+        if(self._buffer.get_size() > self._max_buffer_size):
             self._buffer.clear()
+            print("Buffer has been cleared to reduce latency")
 
 
     def process_beamformer_delay_line(self, input):

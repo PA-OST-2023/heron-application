@@ -8,7 +8,7 @@ class Main():
         self.ip = "192.168.33.80"
 
         self.sample_rate = 44100
-        self.block_len = 256
+        self.block_len = 512
         self.mic_num = 32
 
         self.com = Communication()

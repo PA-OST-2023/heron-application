@@ -19,6 +19,7 @@ class Main():
 
         self.theta = 0
         self.phi = 0
+        self.arm = 0
         self.running = False
 
     def __del__(self):
@@ -45,17 +46,16 @@ class Main():
         self.proc.start_stream()
         try:
             while self.running:
+                json = self.com.getData()
+                if json != None:
+                    self.arm = json["sensor_angle"]
+                    self.proc.beamformer.update_arm_angle(self.arm)
 
-                # Check if we have to update arm angle
-                if False:
-                    arm_angle = self.com.getData()["sensor_angle"]
-                    self.proc.beamformer.update_arm_angle(arm_angle)
-
-                print(f"Theta: {self.theta:.1f}, Phi: {self.phi:.1f}")
+                print(f"Theta: {self.theta:.1f}, Phi: {self.phi:.1f}, Arm: {self.arm:.1f}")
                 delays = self.proc.beamformer.calculate_delays(self.phi, self.theta)
                 self.proc.update_delays(delays)
 
-                time.sleep(0.5)
+                time.sleep(0.25)
 
         except KeyboardInterrupt:
             print("Terminating")

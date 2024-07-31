@@ -16,7 +16,7 @@ class Beamformer:
         self._coords = self.calculate_umbrella_array(radians(self._arm_angle), 0.01185 - 0.0016)
 
     def calculate_delays(self, phi, theta, vm=340):
-        angle = np.array([-radians(phi), pi / 2 - radians(theta)])      # Calculate angles for a single (phi, theta)
+        angle = np.array([-radians(phi + 90), pi / 2 - radians(theta)])      # Calculate angles for a single (phi, theta)
         mat = R.from_euler("zy", angle, degrees=False)              # Compute the rotation matrix for the given angle
         coord_t = (mat.as_matrix() @ self._coords.T).swapaxes(-1, -2)
         t_s = coord_t[:, 0].reshape((-1, 1)) / vm

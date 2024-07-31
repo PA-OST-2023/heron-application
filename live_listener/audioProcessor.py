@@ -106,7 +106,7 @@ class AudioProcessor:
         mono = self.process_beamformer_delay_line(data)
         self._recorder.append(mono)
 
-        mono = self.process_filter(mono, 1500, 3000)
+        mono = self.process_filter(mono, 1400, 1900)
         mono = self.process_compressor(mono, -10, 8, 40)
 
         outdata[:] = (mono * 32767.0).astype(np.int16).reshape(-1, 1)      # Convert back to int16 for output

@@ -8,7 +8,7 @@ class Main():
         self.ip = "192.168.33.80"
 
         self.sample_rate = 44100
-        self.block_len = 128
+        self.block_len = 256
         self.mic_num = 32
 
         self.com = Communication()
@@ -27,7 +27,11 @@ class Main():
             time.sleep(0.5)
         
         self.run()
-        self.stop()
+
+
+    def stop(self):
+        self.proc.end_stream()
+        self.com.stop()
 
 
     def run(self):
@@ -41,12 +45,16 @@ class Main():
 
         self.proc.start_stream()
 
-        while self.running:
-            time.sleep(1)
+        try:
+            while self.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Terminating")
+        finally:
+            self.stop()
 
-    def stop(self):
-        self.proc.end_stream()
-        self.com.stop()
+
+    
         
 
 main = Main()

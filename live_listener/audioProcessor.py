@@ -8,13 +8,13 @@ import numpy as np
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import convolve, firwin, lfilter
 from numba import jit
-
-import matplotlib.pyplot as plt
+import time
 
 
 class AudioProcessor:
     def __init__(self,ip_addr, port=6666, channels=32, fs=44100, block_len=256):
         self._stream_active = False
+        self._stream_stopping = False
         self._fs = fs
         self._block_len = block_len
         self._name = ip_addr
@@ -57,9 +57,15 @@ class AudioProcessor:
     def end_stream(self):
         if not self._stream_active:
             return
-        self._stream_active = False
-        self._tcp_reciever.stop()
-        self.stream.stop()
+        self._stream_stopping = True
+        try:
+            while self._stream_active:
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self._tcp_reciever.stop()
+            self.stream.stop()
 
     def start_recording(self, fname):
         if not self._stream_active:
@@ -87,14 +93,14 @@ class AudioProcessor:
     
     # Internal functions
     def callback(self, outdata, frames, time, status):
+        data = self._buffer.get_n(frames)
+        if data is None or not self._stream_active:
+            np.zeros((frames, 1), dtype=np.int16)
+
         if self._initial_buffer_clear:
             self._buffer.clear()
             self._initial_buffer_clear = False
             print("Initial buffer cleared")
-        
-        data = self._buffer.get_n(frames)
-        if data is None:
-            np.zeros((frames, 1), dtype=np.int16)
         
         data = data.astype(np.float32) / 32767.0            # Use float32 for processing
         mono = self.process_beamformer_delay_line(data)
@@ -107,6 +113,10 @@ class AudioProcessor:
         if(self._buffer.get_size() > self._max_buffer_size):
             self._buffer.clear()
             print("Buffer has been cleared to reduce latency")
+
+        if self._stream_stopping:
+            self._stream_active = False
+            self._stream_stopping = False
 
 
     def process_beamformer_delay_line(self, input):

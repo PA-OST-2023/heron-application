@@ -1,5 +1,8 @@
 from audioProcessor import AudioProcessor
 from communication import Communication
+from xboxcontroller import XboxController
+import numpy as np
+import threading
 import time
 
 
@@ -14,6 +17,8 @@ class Main():
         self.com = Communication()
         self.proc = AudioProcessor(self.ip, 6666, self.mic_num, self.sample_rate, self.block_len)
 
+        self.theta = 0
+        self.phi = 0
         self.running = False
 
     def __del__(self):
@@ -21,40 +26,52 @@ class Main():
     
     def start(self):
         self.running = True
+        threading.Thread(target=self.controller_thread).start()
 
         self.com.start(self.ip, 6667)
         if(self.com.getData() == None):     # Wait for connection
             time.sleep(0.5)
-        
         self.run()
 
-
     def stop(self):
+        self.running = False
         self.proc.end_stream()
         self.com.stop()
 
-
     def run(self):
-        theta = 90
-        phi = 0
-
         arm_angle = self.com.getData()["sensor_angle"]
         self.proc.beamformer.update_arm_angle(arm_angle)
-        delays = self.proc.beamformer.calculate_delays(phi, theta)
-        self.proc.update_delays(delays)
 
         self.proc.start_stream()
-
         try:
             while self.running:
-                time.sleep(1)
+
+                # Check if we have to update arm angle
+                if False:
+                    arm_angle = self.com.getData()["sensor_angle"]
+                    self.proc.beamformer.update_arm_angle(arm_angle)
+
+                print(f"Theta: {self.theta:.1f}, Phi: {self.phi:.1f}")
+                delays = self.proc.beamformer.calculate_delays(self.phi, self.theta)
+                self.proc.update_delays(delays)
+
+                time.sleep(0.5)
+
         except KeyboardInterrupt:
             print("Terminating")
         finally:
             self.stop()
 
 
-    
+    def controller_thread(self):
+        self.controller = XboxController()
+        while self.running:
+            stick = self.controller.read()
+            self.theta = np.sqrt(stick[0]**2 + stick[1]**2) * 90
+            self.phi = np.arctan2(stick[0], -stick[1]) * 180 / np.pi + 180
+            self.theta = np.clip(self.theta, 0, 90)
+            self.phi = np.clip(self.phi, 0, 360)
+            time.sleep(0.5)
         
 
 main = Main()

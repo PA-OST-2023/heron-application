@@ -29,13 +29,21 @@ class Recorder:
 
 
 if __name__ == "__main__":
-    freq = 500                  # Hz
+    freq_0 = 500                # Hz
+    freq_1 = 1000               # Hz
     duration = 5                # seconds
     sample_rate = 44100         # Hz
 
-    recoder = Recorder(1, sample_rate)      # Mono
+    data_0 = np.sin(2 * np.pi * np.arange(sample_rate * duration) * freq_0 / sample_rate)
+    data_1 = np.sin(2 * np.pi * np.arange(sample_rate * duration) * freq_1 / sample_rate)
 
-    data = np.sin(2 * np.pi * np.arange(sample_rate * duration) * freq / sample_rate)
-    recoder.start_recording("test.wav")
-    recoder.append(data)
+    recoder = Recorder(1, sample_rate)      # Mono
+    recoder.start_recording("mono.wav")
+    recoder.append(data_0)
     recoder.stop_recording()
+
+    recoder = Recorder(2, sample_rate)      # Stereo
+    recoder.start_recording("stereo.wav")
+    recoder.append(np.array([data_0, data_1]).T)
+    recoder.stop_recording()
+    

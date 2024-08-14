@@ -69,7 +69,7 @@ class Main():
             if stick != (-1, -1):
                 self.controller_connected = True
                 self.theta = np.sqrt(stick[0]**2 + stick[1]**2) * 90
-                self.phi = np.arctan2(stick[0], -stick[1]) * 180 / np.pi + 180
+                self.phi = np.arctan2(stick[0], stick[1]) * 180 / np.pi + 180
                 self.theta = np.clip(self.theta, 0, 90)
                 self.phi = np.clip(self.phi, 0, 360)
             else:

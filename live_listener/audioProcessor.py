@@ -5,7 +5,6 @@ from beamformer import Beamformer
 
 import sounddevice as sd
 import numpy as np
-from scipy import signal
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import convolve, firwin, lfilter
 from numba import jit
@@ -44,8 +43,8 @@ class AudioProcessor:
         self._filter_buffer = np.zeros(self._filter_taps - 1)
 
         self.update_delays(self.beamformer.calculate_delays(0, 0))   # Initialize delays (dummy)
-
-
+        
+        
 
     def start_stream(self):
         if self._stream_active:
@@ -90,8 +89,8 @@ class AudioProcessor:
         n = np.arange(self._delay_line_taps)
         h = np.sinc(n - (delays * self._fs) - self._delay_line_offset).astype(np.float32)      # Impulse response of the delay line
         self._delay_line_weights = h
-
-
+        
+    
     # Internal functions
     def callback(self, outdata, frames, t, status):
         data = self._buffer.get_n(frames)
@@ -107,8 +106,8 @@ class AudioProcessor:
         mono = self.process_beamformer_delay_line(data)
         self._recorder.append(mono)
 
-        mono = self.process_filter(mono, 1500, 1750)
-        mono = self.process_compressor(mono, -30, 50, 55)
+        mono = self.process_filter(mono, 1400, 1900)
+        mono = self.process_compressor(mono, -10, 8, 40)
 
         outdata[:] = (mono * 32767.0).astype(np.int16).reshape(-1, 1)      # Convert back to int16 for output
         if(self._buffer.get_size() > self._max_buffer_size):
@@ -143,10 +142,18 @@ class AudioProcessor:
         valid_end = valid_start + self._block_len
         output[:] = convolved[valid_start:valid_end]
         return output
-
+    
 
     def process_compressor(self, input, threshold=-20, ratio=2, make_up_gain=0):
-        return compressor(input, threshold, ratio, make_up_gain)
+        ratio = min(ratio, 0.01)
+        threshold_lin = 10**(threshold / 20)
+        rms = np.sqrt(np.mean(input**2))            # Calculate the input signal's envelope (RMS)
+        if rms > threshold_lin:                     # Calculate gain reduction factor
+            gain_reduction = (rms / threshold_lin)**(1 - 1/ratio)
+        else:
+            gain_reduction = 1.0
+        output = input * gain_reduction * 10**(make_up_gain / 20)    # Apply gain reduction
+        return output
 
 
 @jit

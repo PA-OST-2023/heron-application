@@ -19,7 +19,7 @@ class RingBuffer:
 
     def is_full(self):
         return self.size == self.capacity
-    
+
     def clear(self):
         self.size = 0
         self.head = 0
@@ -42,7 +42,7 @@ class RingBuffer:
         indices = np.arange(self.head - num, self.head, 1)
         self.size = 0       # reset size since we discard all data behind tail
         return self._data[indices, :].copy()
-        
+
     def get_n(self, num):           # get n last samples in buffer
         if self.get_available() < num:
             return None
@@ -60,6 +60,7 @@ class RingBuffer:
 
 if __name__ == "__main__":
     from time import sleep
+    import threading
 
     def writer(buffer):
         for i in range(44100):

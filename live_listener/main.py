@@ -54,7 +54,7 @@ class Main():
                 delays = self.proc.beamformer.calculate_delays(self.phi, self.theta)
                 self.proc.update_delays(delays)
 
-                time.sleep(0.25)
+                time.sleep(0.1)
 
         except KeyboardInterrupt:
             print("Terminating")
@@ -74,7 +74,7 @@ class Main():
                 self.phi = np.clip(self.phi, 0, 360)
             else:
                 self.controller_connected = False
-            time.sleep(0.5)
+            time.sleep(0.1)
         
 
 main = Main()

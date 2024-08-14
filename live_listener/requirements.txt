@@ -1,5 +1,5 @@
 numpy
 sounddevice
 scipy  # Needs: sudo apt install gfortran
-# numba
+numba  # Needs to be installed with: sudo apt install python3-llvmlite
 inputs

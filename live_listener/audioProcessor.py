@@ -5,6 +5,7 @@ from beamformer import Beamformer
 
 import sounddevice as sd
 import numpy as np
+from scipy import signal
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import convolve, firwin, lfilter
 from numba import jit
@@ -106,8 +107,8 @@ class AudioProcessor:
         mono = self.process_beamformer_delay_line(data)
         self._recorder.append(mono)
 
-        mono = self.process_filter(mono, 1400, 1900)
-        mono = self.process_compressor(mono, -10, 8, 40)
+        mono = self.process_filter(mono, 1500, 1750)
+        mono = self.process_compressor(mono, -30, 50, 55)
 
         outdata[:] = (mono * 32767.0).astype(np.int16).reshape(-1, 1)      # Convert back to int16 for output
         if(self._buffer.get_size() > self._max_buffer_size):
@@ -145,15 +146,7 @@ class AudioProcessor:
 
 
     def process_compressor(self, input, threshold=-20, ratio=2, make_up_gain=0):
-        ratio = min(ratio, 0.01)
-        threshold_lin = 10**(threshold / 20)
-        rms = np.sqrt(np.mean(input**2))            # Calculate the input signal's envelope (RMS)
-        if rms > threshold_lin:                     # Calculate gain reduction factor
-            gain_reduction = (rms / threshold_lin)**(1 - 1/ratio)
-        else:
-            gain_reduction = 1.0
-        output = input * gain_reduction * 10**(make_up_gain / 20)    # Apply gain reduction
-        return output
+        return compressor(input, threshold, ratio, make_up_gain)
 
 
 @jit

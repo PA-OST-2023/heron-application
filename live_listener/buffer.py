@@ -1,5 +1,4 @@
 import numpy as np
-import threading
 
 class RingBuffer:
     def __init__(self, capacity, num_channels):
@@ -10,7 +9,6 @@ class RingBuffer:
         self.head = np.uint32(0)
         self.tail = np.uint32(0)
         self._available = 0
-        self._readCondition = threading.Condition()
         self._isReadReady = False
 
     def is_empty(self):
@@ -28,38 +26,30 @@ class RingBuffer:
         self.tail = 0
 
     def append(self, item, size):
-        with self._readCondition:
-            if self.is_full():
-                self.tail = (self.tail + 1) & self.ringMask
-            else:
-                self.size += size
-            self._data[self.head : self.head + size] = item
-            self.head = (self.head + size) & self.ringMask
-            self._readCondition.notify_all()
+        if self.is_full():
+            self.tail = (self.tail + 1) & self.ringMask
+        else:
+            self.size += size
+        self._data[self.head : self.head + size] = item
+        self.head = (self.head + size) & self.ringMask
 
     def get_all_available(self):
         return [self.data[(self.tail + i) % self.capacity] for i in range(self.size)]
 
     def get_n_from_head(self, num):           # get n first samples from top
-        with self._readCondition:
-            if not self._readCondition.wait_for(
-                lambda: self.get_available() >= num, timeout=10
-            ):
-                return None
-            indices = np.arange(self.head - num, self.head, 1)
-            self.size = 0       # reset size since we discard all data behind tail
-            return self._data[indices, :].copy()
+        if self.get_available() < num:
+            return None
+        indices = np.arange(self.head - num, self.head, 1)
+        self.size = 0       # reset size since we discard all data behind tail
+        return self._data[indices, :].copy()
         
     def get_n(self, num):           # get n last samples in buffer
-        with self._readCondition:
-            if not self._readCondition.wait_for(
-                lambda: self.get_available() >= num, timeout=10
-            ):
-                return None
-            indices = np.arange(self.tail, self.tail + num, 1)
-            self.tail = (self.tail + num) & self.ringMask
-            self.size -= num
-            return self._data[indices, :].copy()
+        if self.get_available() < num:
+            return None
+        indices = np.arange(self.tail, self.tail + num, 1)
+        self.tail = (self.tail + num) & self.ringMask
+        self.size -= num
+        return self._data[indices, :].copy()
 
     def get_capacity(self):
         return self.capacity

@@ -8,7 +8,7 @@ import time
 
 class Main():
     def __init__(self):
-        self.ip = "192.168.33.80"
+        self.ip = "192.168.40.80"
 
         self.sample_rate = 44100
         self.block_len = 512
@@ -26,7 +26,7 @@ class Main():
 
     def __del__(self):
         self.stop()
-    
+
     def start(self):
         self.running = True
         threading.Thread(target=self.controller_thread).start()

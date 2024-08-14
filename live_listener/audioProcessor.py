@@ -7,12 +7,12 @@ import sounddevice as sd
 import numpy as np
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import convolve, firwin, lfilter
-# from numba import jit
+from numba import jit
 import time
 
 
 class AudioProcessor:
-    def __init__(self,ip_addr, port=6666, channels=32, fs=44100, block_len=256):
+    def __init__(self,ip_addr, port=6666, channels=32, fs=44100, block_len=512):
         self._stream_active = False
         self._stream_stopping = False
         self._fs = fs
@@ -34,7 +34,7 @@ class AudioProcessor:
         self._last_block_fft = np.zeros(self._block_len, dtype=np.complex64)    # Mono output
 
         # Delay-Line Approach
-        self._delay_line_taps = 128
+        self._delay_line_taps = 80
         self._delay_line_offset = 20
         self._delay_line = np.zeros((self._channels, self._delay_line_taps), dtype=np.float32)
 
@@ -43,8 +43,8 @@ class AudioProcessor:
         self._filter_buffer = np.zeros(self._filter_taps - 1)
 
         self.update_delays(self.beamformer.calculate_delays(0, 0))   # Initialize delays (dummy)
-        
-        
+
+
 
     def start_stream(self):
         if self._stream_active:
@@ -89,19 +89,19 @@ class AudioProcessor:
         n = np.arange(self._delay_line_taps)
         h = np.sinc(n - (delays * self._fs) - self._delay_line_offset).astype(np.float32)      # Impulse response of the delay line
         self._delay_line_weights = h
-        
-    
+
+
     # Internal functions
-    def callback(self, outdata, frames, time, status):
+    def callback(self, outdata, frames, t, status):
         data = self._buffer.get_n(frames)
         if data is None or not self._stream_active:
-            np.zeros((frames, 1), dtype=np.int16)
+            data = np.zeros((frames, 1), dtype=np.int16)
 
         if self._initial_buffer_clear:
             self._buffer.clear()
             self._initial_buffer_clear = False
             print("Initial buffer cleared")
-        
+
         data = data.astype(np.float32) / 32767.0            # Use float32 for processing
         mono = self.process_beamformer_delay_line(data)
         self._recorder.append(mono)
@@ -124,14 +124,14 @@ class AudioProcessor:
 
 
     def process_beamformer_fft(self, input):
-        spectrum = fft(input.T, n=self._block_len_fft, axis=-1)      
+        spectrum = fft(input.T, n=self._block_len_fft, axis=-1)
         output = ifft(self._delay_filter * spectrum, n=self._block_len_fft)
         sum_output = np.sum(output, axis=0) / self._channels
         sum_overlapped = sum_output[:self._block_len] + self._last_block_fft
         self._last_block_fft = sum_output[self._block_len:]
         return sum_overlapped.real
-    
-    
+
+
     def process_filter(self, input, f_min, f_max):        # Mono Low Pass Filter
         output = np.zeros(self._block_len, dtype=np.float32)
         h = firwin(self._filter_taps, [f_min, f_max], pass_zero=False, fs=self._fs)
@@ -142,7 +142,7 @@ class AudioProcessor:
         valid_end = valid_start + self._block_len
         output[:] = convolved[valid_start:valid_end]
         return output
-    
+
 
     def process_compressor(self, input, threshold=-20, ratio=2, make_up_gain=0):
         ratio = min(ratio, 0.01)
@@ -156,7 +156,7 @@ class AudioProcessor:
         return output
 
 
-# @jit
+@jit
 def delay_line(delay_line_object, weights, input):
     output = np.zeros(input.shape[0], dtype=np.float32)
     for i in range(input.shape[0]):
@@ -166,11 +166,10 @@ def delay_line(delay_line_object, weights, input):
     return output
 
 
-
 if __name__ == "__main__":
     import time
 
-    ip = "192.168.33.80"
+    ip = "192.168.40.80"
     proc = AudioProcessor(ip)
     proc.start_stream()
     print("Start Streaming")

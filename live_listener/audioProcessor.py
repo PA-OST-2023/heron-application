@@ -104,10 +104,10 @@ class AudioProcessor:
 
         data = data.astype(np.float32) / 32767.0            # Use float32 for processing
         mono = self.process_beamformer_delay_line(data)
-        self._recorder.append(mono)
-
-        mono = self.process_filter(mono, 1400, 1900)
+        
+        mono = self.process_filter(mono, 1400, 2900)
         mono = self.process_compressor(mono, -10, 8, 40)
+        self._recorder.append(mono)
 
         outdata[:] = (mono * 32767.0).astype(np.int16).reshape(-1, 1)      # Convert back to int16 for output
         if(self._buffer.get_size() > self._max_buffer_size):

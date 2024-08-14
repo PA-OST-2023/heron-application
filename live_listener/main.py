@@ -1,6 +1,7 @@
 from audioProcessor import AudioProcessor
 from communication import Communication
 from xboxcontroller import XboxController
+from datetime import datetime
 import numpy as np
 import threading
 import time
@@ -43,6 +44,7 @@ class Main():
 
     def run(self):
         self.proc.start_stream()
+        self.proc.start_recording(f"{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}.wav")
         try:
             while self.running:
                 json = self.com.getData()
@@ -59,6 +61,7 @@ class Main():
         except KeyboardInterrupt:
             print("Terminating")
         finally:
+            self.proc.stop_recording()
             self.stop()
 
 
